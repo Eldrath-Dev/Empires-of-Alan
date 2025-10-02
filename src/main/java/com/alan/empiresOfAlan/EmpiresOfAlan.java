@@ -166,3 +166,4 @@ public class EmpiresOfAlan extends JavaPlugin {
         return EmpiresOfAlanAPI.getInstance(this);
     }
 }
+

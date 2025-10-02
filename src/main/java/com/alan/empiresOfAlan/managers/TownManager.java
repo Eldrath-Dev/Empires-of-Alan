@@ -1,14 +1,9 @@
 package com.alan.empiresOfAlan.managers;
 
-import com.alan.empiresOfAlan.events.town.TownCreateEvent;
-import com.alan.empiresOfAlan.events.town.TownDeleteEvent;
-import com.alan.empiresOfAlan.events.town.TownDemoteEvent;
-import com.alan.empiresOfAlan.events.town.TownPromoteEvent;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.TownRole;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -63,11 +58,11 @@ public class TownManager {
     }
 
     /**
-     * Create a new town and fire the TownCreateEvent
+     * Create a new town
      *
      * @param name Town name
      * @param founder Founding player
-     * @return The new town, or null if creation failed or event was cancelled
+     * @return The new town, or null if creation failed
      */
     public Town createTown(String name, Player founder) {
         // Check if name is already taken
@@ -91,17 +86,6 @@ public class TownManager {
         resident.setTownId(townId);
         resident.setTownRole(TownRole.OWNER);
 
-        // Fire the event
-        TownCreateEvent event = new TownCreateEvent(town, founder);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled, revert changes
-            resident.setTownId(null);
-            resident.setTownRole(TownRole.MEMBER);
-            return null;
-        }
-
         // Register the town
         towns.put(townId, town);
         townNameToId.put(name.toLowerCase(), townId);
@@ -110,24 +94,14 @@ public class TownManager {
     }
 
     /**
-     * Delete a town and fire the TownDeleteEvent
+     * Delete a town
      *
      * @param townId Town UUID
-     * @param deleter The player deleting the town, or null if deleted by console/system
-     * @return true if successful, false if town not found or event was cancelled
+     * @return true if successful, false if town not found
      */
-    public boolean deleteTown(UUID townId, Player deleter) {
+    public boolean deleteTown(UUID townId) {
         Town town = getTown(townId);
         if (town == null) {
-            return false;
-        }
-
-        // Fire the event
-        TownDeleteEvent event = new TownDeleteEvent(town, deleter);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
             return false;
         }
 
@@ -138,7 +112,7 @@ public class TownManager {
             if (nation != null) {
                 if (nation.getCapitalId().equals(townId)) {
                     // If town is the nation's capital, delete the nation
-                    nationManager.deleteNation(nation.getId(), deleter);
+                    nationManager.deleteNation(nation.getId());
                 } else {
                     // Otherwise just remove the town from the nation
                     nation.removeTown(townId);
@@ -169,13 +143,53 @@ public class TownManager {
     }
 
     /**
-     * Delete a town
+     * Delete a town with event support
      *
      * @param townId Town UUID
+     * @param deleter Player deleting the town
      * @return true if successful, false if town not found
      */
-    public boolean deleteTown(UUID townId) {
-        return deleteTown(townId, null);
+    public boolean deleteTown(UUID townId, Player deleter) {
+        Town town = getTown(townId);
+        if (town == null) {
+            return false;
+        }
+
+        // Remove town from nation if it belongs to one
+        if (town.hasNation()) {
+            NationManager nationManager = NationManager.getInstance();
+            Nation nation = nationManager.getNation(town.getNationId());
+            if (nation != null) {
+                if (nation.getCapitalId().equals(townId)) {
+                    // If town is the nation's capital, delete the nation
+                    nationManager.deleteNation(nation.getId());
+                } else {
+                    // Otherwise just remove the town from the nation
+                    nation.removeTown(townId);
+                }
+            }
+        }
+
+        // Remove all residents from the town
+        ResidentManager residentManager = ResidentManager.getInstance();
+        for (UUID residentId : new ArrayList<>(town.getResidents())) {
+            Resident resident = residentManager.getResident(residentId);
+            if (resident != null) {
+                resident.leaveTown();
+            }
+        }
+
+        // Remove all claims
+        ClaimManager claimManager = ClaimManager.getInstance();
+        for (UUID claimId : new ArrayList<>(town.getClaims())) {
+            claimManager.unclaimChunk(claimId);
+        }
+
+        // Remove the town
+        townNameToId.remove(town.getName().toLowerCase());
+        towns.remove(townId);
+
+        return true;
     }
 
     /**
@@ -264,14 +278,13 @@ public class TownManager {
     }
 
     /**
-     * Promote a resident in a town and fire the TownPromoteEvent
+     * Promote a resident in a town
      *
      * @param promoterId The resident doing the promotion
      * @param targetId The resident being promoted
-     * @param promoterPlayer The player doing the promotion
-     * @return true if successful, false otherwise or if event was cancelled
+     * @return true if successful, false otherwise
      */
-    public boolean promoteResident(UUID promoterId, UUID targetId, Player promoterPlayer) {
+    public boolean promoteResident(UUID promoterId, UUID targetId) {
         ResidentManager residentManager = ResidentManager.getInstance();
         Resident promoter = residentManager.getResident(promoterId);
         Resident target = residentManager.getResident(targetId);
@@ -297,50 +310,54 @@ public class TownManager {
             return false;
         }
 
-        // Get the town
-        Town town = getTown(promoter.getTownId());
-        if (town == null) {
-            return false;
-        }
-
-        // Store old role
-        TownRole oldRole = target.getTownRole();
-        TownRole newRole = TownRole.getByLevel(oldRole.getLevel() + 1);
-
-        // Fire the event
-        TownPromoteEvent event = new TownPromoteEvent(town, target, promoterPlayer, oldRole, newRole);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return false;
-        }
-
-        // Promote the resident
         return residentManager.promoteTownRole(targetId);
     }
 
     /**
-     * Promote a resident in a town
+     * Promote a resident in a town with event support
      *
      * @param promoterId The resident doing the promotion
      * @param targetId The resident being promoted
+     * @param promoter The player doing the promotion
      * @return true if successful, false otherwise
      */
-    public boolean promoteResident(UUID promoterId, UUID targetId) {
-        Player promoter = Bukkit.getPlayer(promoterId);
-        return promoteResident(promoterId, targetId, promoter);
+    public boolean promoteResident(UUID promoterId, UUID targetId, Player promoter) {
+        ResidentManager residentManager = ResidentManager.getInstance();
+        Resident promoterResident = residentManager.getResident(promoterId);
+        Resident target = residentManager.getResident(targetId);
+
+        if (promoterResident == null || target == null) {
+            return false;
+        }
+
+        // Check if both are in the same town
+        if (!promoterResident.hasTown() || !target.hasTown() ||
+                !promoterResident.getTownId().equals(target.getTownId())) {
+            return false;
+        }
+
+        // Check permission - must be at least one level higher
+        if (!promoterResident.getTownRole().isAtLeast(TownRole.MAYOR) ||
+                promoterResident.getTownRole().getLevel() <= target.getTownRole().getLevel()) {
+            return false;
+        }
+
+        // Cannot promote to owner
+        if (target.getTownRole() == TownRole.MAYOR) {
+            return false;
+        }
+
+        return residentManager.promoteTownRole(targetId);
     }
 
     /**
-     * Demote a resident in a town and fire the TownDemoteEvent
+     * Demote a resident in a town
      *
      * @param demoterId The resident doing the demotion
      * @param targetId The resident being demoted
-     * @param demoterPlayer The player doing the demotion
-     * @return true if successful, false otherwise or if event was cancelled
+     * @return true if successful, false otherwise
      */
-    public boolean demoteResident(UUID demoterId, UUID targetId, Player demoterPlayer) {
+    public boolean demoteResident(UUID demoterId, UUID targetId) {
         ResidentManager residentManager = ResidentManager.getInstance();
         Resident demoter = residentManager.getResident(demoterId);
         Resident target = residentManager.getResident(targetId);
@@ -366,39 +383,44 @@ public class TownManager {
             return false;
         }
 
-        // Get the town
-        Town town = getTown(demoter.getTownId());
-        if (town == null) {
-            return false;
-        }
-
-        // Store old role
-        TownRole oldRole = target.getTownRole();
-        TownRole newRole = TownRole.getByLevel(oldRole.getLevel() - 1);
-
-        // Fire the event
-        TownDemoteEvent event = new TownDemoteEvent(town, target, demoterPlayer, oldRole, newRole);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return false;
-        }
-
-        // Demote the resident
         return residentManager.demoteTownRole(targetId);
     }
 
     /**
-     * Demote a resident in a town
+     * Demote a resident in a town with event support
      *
      * @param demoterId The resident doing the demotion
      * @param targetId The resident being demoted
+     * @param demoter The player doing the demotion
      * @return true if successful, false otherwise
      */
-    public boolean demoteResident(UUID demoterId, UUID targetId) {
-        Player demoter = Bukkit.getPlayer(demoterId);
-        return demoteResident(demoterId, targetId, demoter);
+    public boolean demoteResident(UUID demoterId, UUID targetId, Player demoter) {
+        ResidentManager residentManager = ResidentManager.getInstance();
+        Resident demoterResident = residentManager.getResident(demoterId);
+        Resident target = residentManager.getResident(targetId);
+
+        if (demoterResident == null || target == null) {
+            return false;
+        }
+
+        // Check if both are in the same town
+        if (!demoterResident.hasTown() || !target.hasTown() ||
+                !demoterResident.getTownId().equals(target.getTownId())) {
+            return false;
+        }
+
+        // Check permission - must be at least one level higher
+        if (!demoterResident.getTownRole().isAtLeast(TownRole.MAYOR) ||
+                demoterResident.getTownRole().getLevel() <= target.getTownRole().getLevel()) {
+            return false;
+        }
+
+        // Check if target is already at minimum role
+        if (target.getTownRole() == TownRole.MEMBER) {
+            return false;
+        }
+
+        return residentManager.demoteTownRole(targetId);
     }
 
     /**
@@ -529,5 +551,23 @@ public class TownManager {
         }
 
         return town.removeClaim(claimId);
+    }
+
+    /**
+     * Get the internal towns map (for database access)
+     *
+     * @return The towns map
+     */
+    public Map<UUID, Town> getTowns() {
+        return towns;
+    }
+
+    /**
+     * Get the internal town name to ID map (for database access)
+     *
+     * @return The town name to ID map
+     */
+    public Map<String, UUID> getTownNameToId() {
+        return townNameToId;
     }
 }

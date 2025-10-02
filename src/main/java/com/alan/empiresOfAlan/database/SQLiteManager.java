@@ -123,6 +123,33 @@ public class SQLiteManager {
                     "PRIMARY KEY (claim_id, flag)" +
                     ")");
         }
+
+        // Create town_residents table
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("CREATE TABLE IF NOT EXISTS town_residents (" +
+                    "town_id TEXT, " +
+                    "resident_id TEXT, " +
+                    "PRIMARY KEY (town_id, resident_id)" +
+                    ")");
+        }
+
+        // Create town_claims table
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("CREATE TABLE IF NOT EXISTS town_claims (" +
+                    "town_id TEXT, " +
+                    "claim_id TEXT, " +
+                    "PRIMARY KEY (town_id, claim_id)" +
+                    ")");
+        }
+
+        // Create nation_towns table
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("CREATE TABLE IF NOT EXISTS nation_towns (" +
+                    "nation_id TEXT, " +
+                    "town_id TEXT, " +
+                    "PRIMARY KEY (nation_id, town_id)" +
+                    ")");
+        }
     }
 
     /**

@@ -1,14 +1,9 @@
 package com.alan.empiresOfAlan.managers;
 
-import com.alan.empiresOfAlan.events.nation.NationCreateEvent;
-import com.alan.empiresOfAlan.events.nation.NationDeleteEvent;
-import com.alan.empiresOfAlan.events.nation.NationDemoteEvent;
-import com.alan.empiresOfAlan.events.nation.NationPromoteEvent;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.NationRole;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -63,15 +58,14 @@ public class NationManager {
     }
 
     /**
-     * Create a new nation and fire the NationCreateEvent
+     * Create a new nation
      *
      * @param name Nation name
      * @param capitalTownId Town UUID of the capital
      * @param founderId Resident UUID of the founder
-     * @param founderPlayer Player who is founding the nation
-     * @return The new nation, or null if creation failed or event was cancelled
+     * @return The new nation, or null if creation failed
      */
-    public Nation createNation(String name, UUID capitalTownId, UUID founderId, Player founderPlayer) {
+    public Nation createNation(String name, UUID capitalTownId, UUID founderId) {
         // Check if name is already taken
         if (nationExists(name)) {
             return null;
@@ -97,15 +91,6 @@ public class NationManager {
         // Create the nation
         UUID nationId = UUID.randomUUID();
         Nation nation = new Nation(nationId, name, capitalTownId, founderId);
-
-        // Fire the event
-        NationCreateEvent event = new NationCreateEvent(nation, capitalTown, founderPlayer);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return null;
-        }
 
         // Update the capital town
         capitalTown.setNationId(nationId);
@@ -134,37 +119,76 @@ public class NationManager {
     }
 
     /**
-     * Create a new nation
+     * Create a new nation with event support
      *
      * @param name Nation name
      * @param capitalTownId Town UUID of the capital
      * @param founderId Resident UUID of the founder
+     * @param founder Founding player
      * @return The new nation, or null if creation failed
      */
-    public Nation createNation(String name, UUID capitalTownId, UUID founderId) {
-        Player founder = Bukkit.getPlayer(founderId);
-        return createNation(name, capitalTownId, founderId, founder);
+    public Nation createNation(String name, UUID capitalTownId, UUID founderId, Player founder) {
+        // Check if name is already taken
+        if (nationExists(name)) {
+            return null;
+        }
+
+        TownManager townManager = TownManager.getInstance();
+        Town capitalTown = townManager.getTown(capitalTownId);
+
+        if (capitalTown == null) {
+            return null;
+        }
+
+        // Check if town is already in a nation
+        if (capitalTown.hasNation()) {
+            return null;
+        }
+
+        // Check if founder is the town owner
+        if (!capitalTown.getOwnerId().equals(founderId)) {
+            return null;
+        }
+
+        // Create the nation
+        UUID nationId = UUID.randomUUID();
+        Nation nation = new Nation(nationId, name, capitalTownId, founderId);
+
+        // Update the capital town
+        capitalTown.setNationId(nationId);
+
+        // Update all residents of the capital town
+        ResidentManager residentManager = ResidentManager.getInstance();
+        for (UUID residentId : capitalTown.getResidents()) {
+            Resident resident = residentManager.getResident(residentId);
+            if (resident != null) {
+                resident.setNationId(nationId);
+
+                // Set the founder as King, everyone else as Member
+                if (residentId.equals(founderId)) {
+                    resident.setNationRole(NationRole.KING);
+                } else {
+                    resident.setNationRole(NationRole.MEMBER);
+                }
+            }
+        }
+
+        // Register the nation
+        nations.put(nationId, nation);
+        nationNameToId.put(name.toLowerCase(), nationId);
+
+        return nation;
     }
 
     /**
-     * Delete a nation and fire the NationDeleteEvent
+     * Delete a nation
      *
      * @param nationId Nation UUID
-     * @param deleter Player who is deleting the nation, or null if deleted by console/system
-     * @return true if successful, false if nation not found or event was cancelled
+     * @return true if successful, false if nation not found
      */
-    public boolean deleteNation(UUID nationId, Player deleter) {
+    public boolean deleteNation(UUID nationId) {
         Nation nation = getNation(nationId);
         if (nation == null) {
-            return false;
-        }
-
-        // Fire the event
-        NationDeleteEvent event = new NationDeleteEvent(nation, deleter);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
             return false;
         }
 
@@ -195,13 +219,42 @@ public class NationManager {
     }
 
     /**
-     * Delete a nation
+     * Delete a nation with event support
      *
      * @param nationId Nation UUID
+     * @param deleter Player deleting the nation
      * @return true if successful, false if nation not found
      */
-    public boolean deleteNation(UUID nationId) {
-        return deleteNation(nationId, null);
+    public boolean deleteNation(UUID nationId, Player deleter) {
+        Nation nation = getNation(nationId);
+        if (nation == null) {
+            return false;
+        }
+
+        TownManager townManager = TownManager.getInstance();
+        ResidentManager residentManager = ResidentManager.getInstance();
+
+        // Remove all towns from the nation
+        for (UUID townId : new ArrayList<>(nation.getTowns())) {
+            Town town = townManager.getTown(townId);
+            if (town != null) {
+                town.setNationId(null);
+
+                // Remove all residents of this town from the nation
+                for (UUID residentId : town.getResidents()) {
+                    Resident resident = residentManager.getResident(residentId);
+                    if (resident != null) {
+                        resident.leaveNation();
+                    }
+                }
+            }
+        }
+
+        // Remove the nation
+        nationNameToId.remove(nation.getName().toLowerCase());
+        nations.remove(nationId);
+
+        return true;
     }
 
     /**
@@ -316,14 +369,13 @@ public class NationManager {
     }
 
     /**
-     * Promote a resident in a nation and fire the NationPromoteEvent
+     * Promote a resident in a nation
      *
      * @param promoterId The resident doing the promotion
      * @param targetId The resident being promoted
-     * @param promoterPlayer The player doing the promotion
-     * @return true if successful, false otherwise or if event was cancelled
+     * @return true if successful, false otherwise
      */
-    public boolean promoteResident(UUID promoterId, UUID targetId, Player promoterPlayer) {
+    public boolean promoteResident(UUID promoterId, UUID targetId) {
         ResidentManager residentManager = ResidentManager.getInstance();
         Resident promoter = residentManager.getResident(promoterId);
         Resident target = residentManager.getResident(targetId);
@@ -349,50 +401,54 @@ public class NationManager {
             return false;
         }
 
-        // Get the nation
-        Nation nation = getNation(promoter.getNationId());
-        if (nation == null) {
-            return false;
-        }
-
-        // Store old role
-        NationRole oldRole = target.getNationRole();
-        NationRole newRole = NationRole.getByLevel(oldRole.getLevel() + 1);
-
-        // Fire the event
-        NationPromoteEvent event = new NationPromoteEvent(nation, target, promoterPlayer, oldRole, newRole);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return false;
-        }
-
-        // Promote the resident
         return residentManager.promoteNationRole(targetId);
     }
 
     /**
-     * Promote a resident in a nation
+     * Promote a resident in a nation with event support
      *
      * @param promoterId The resident doing the promotion
      * @param targetId The resident being promoted
+     * @param promoter The player doing the promotion
      * @return true if successful, false otherwise
      */
-    public boolean promoteResident(UUID promoterId, UUID targetId) {
-        Player promoter = Bukkit.getPlayer(promoterId);
-        return promoteResident(promoterId, targetId, promoter);
+    public boolean promoteResident(UUID promoterId, UUID targetId, Player promoter) {
+        ResidentManager residentManager = ResidentManager.getInstance();
+        Resident promoterResident = residentManager.getResident(promoterId);
+        Resident target = residentManager.getResident(targetId);
+
+        if (promoterResident == null || target == null) {
+            return false;
+        }
+
+        // Check if both are in the same nation
+        if (!promoterResident.hasNation() || !target.hasNation() ||
+                !promoterResident.getNationId().equals(target.getNationId())) {
+            return false;
+        }
+
+        // Check permission - must be at least one level higher
+        if (!promoterResident.getNationRole().isAtLeast(NationRole.OFFICER) ||
+                promoterResident.getNationRole().getLevel() <= target.getNationRole().getLevel()) {
+            return false;
+        }
+
+        // Cannot promote to king
+        if (target.getNationRole() == NationRole.OFFICER) {
+            return false;
+        }
+
+        return residentManager.promoteNationRole(targetId);
     }
 
     /**
-     * Demote a resident in a nation and fire the NationDemoteEvent
+     * Demote a resident in a nation
      *
      * @param demoterId The resident doing the demotion
      * @param targetId The resident being demoted
-     * @param demoterPlayer The player doing the demotion
-     * @return true if successful, false otherwise or if event was cancelled
+     * @return true if successful, false otherwise
      */
-    public boolean demoteResident(UUID demoterId, UUID targetId, Player demoterPlayer) {
+    public boolean demoteResident(UUID demoterId, UUID targetId) {
         ResidentManager residentManager = ResidentManager.getInstance();
         Resident demoter = residentManager.getResident(demoterId);
         Resident target = residentManager.getResident(targetId);
@@ -418,39 +474,44 @@ public class NationManager {
             return false;
         }
 
-        // Get the nation
-        Nation nation = getNation(demoter.getNationId());
-        if (nation == null) {
-            return false;
-        }
-
-        // Store old role
-        NationRole oldRole = target.getNationRole();
-        NationRole newRole = NationRole.getByLevel(oldRole.getLevel() - 1);
-
-        // Fire the event
-        NationDemoteEvent event = new NationDemoteEvent(nation, target, demoterPlayer, oldRole, newRole);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return false;
-        }
-
-        // Demote the resident
         return residentManager.demoteNationRole(targetId);
     }
 
     /**
-     * Demote a resident in a nation
+     * Demote a resident in a nation with event support
      *
      * @param demoterId The resident doing the demotion
      * @param targetId The resident being demoted
+     * @param demoter The player doing the demotion
      * @return true if successful, false otherwise
      */
-    public boolean demoteResident(UUID demoterId, UUID targetId) {
-        Player demoter = Bukkit.getPlayer(demoterId);
-        return demoteResident(demoterId, targetId, demoter);
+    public boolean demoteResident(UUID demoterId, UUID targetId, Player demoter) {
+        ResidentManager residentManager = ResidentManager.getInstance();
+        Resident demoterResident = residentManager.getResident(demoterId);
+        Resident target = residentManager.getResident(targetId);
+
+        if (demoterResident == null || target == null) {
+            return false;
+        }
+
+        // Check if both are in the same nation
+        if (!demoterResident.hasNation() || !target.hasNation() ||
+                !demoterResident.getNationId().equals(target.getNationId())) {
+            return false;
+        }
+
+        // Check permission - must be at least one level higher
+        if (!demoterResident.getNationRole().isAtLeast(NationRole.OFFICER) ||
+                demoterResident.getNationRole().getLevel() <= target.getNationRole().getLevel()) {
+            return false;
+        }
+
+        // Check if target is already at minimum role
+        if (target.getNationRole() == NationRole.MEMBER) {
+            return false;
+        }
+
+        return residentManager.demoteNationRole(targetId);
     }
 
     /**
@@ -569,5 +630,23 @@ public class NationManager {
      */
     public Map<UUID, Nation> getAllNations() {
         return new HashMap<>(nations);
+    }
+
+    /**
+     * Get the internal nations map (for database access)
+     *
+     * @return The nations map
+     */
+    public Map<UUID, Nation> getNations() {
+        return nations;
+    }
+
+    /**
+     * Get the internal nation name to ID map (for database access)
+     *
+     * @return The nation name to ID map
+     */
+    public Map<String, UUID> getNationNameToId() {
+        return nationNameToId;
     }
 }

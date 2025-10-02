@@ -1,21 +1,26 @@
 package com.alan.empiresOfAlan.api;
 
 import com.alan.empiresOfAlan.EmpiresOfAlan;
-import com.alan.empiresOfAlan.managers.ClaimManager;
-import com.alan.empiresOfAlan.managers.NationManager;
-import com.alan.empiresOfAlan.managers.ResidentManager;
-import com.alan.empiresOfAlan.managers.TownManager;
-import com.alan.empiresOfAlan.model.Claim;
-import com.alan.empiresOfAlan.model.Nation;
-import com.alan.empiresOfAlan.model.Resident;
-import com.alan.empiresOfAlan.model.Town;
+import com.alan.empiresOfAlan.events.claim.ClaimAddedEvent;
+import com.alan.empiresOfAlan.events.claim.ClaimRemovedEvent;
+import com.alan.empiresOfAlan.events.nation.*;
+import com.alan.empiresOfAlan.events.town.*;
+import com.alan.empiresOfAlan.managers.*;
+import com.alan.empiresOfAlan.model.*;
+import com.alan.empiresOfAlan.model.bank.BankAccount;
 import com.alan.empiresOfAlan.model.enums.ClaimFlag;
+import com.alan.empiresOfAlan.model.enums.NationRole;
+import com.alan.empiresOfAlan.model.enums.TownRole;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Public API for the EmpiresOfAlan plugin
@@ -41,320 +46,437 @@ public class EmpiresOfAlanAPI {
         return instance;
     }
 
-    /**
-     * Get the ResidentManager
-     *
-     * @return The ResidentManager
-     */
+    // Manager Accessors
     public ResidentManager getResidentManager() {
         return ResidentManager.getInstance();
     }
 
-    /**
-     * Get the TownManager
-     *
-     * @return The TownManager
-     */
     public TownManager getTownManager() {
         return TownManager.getInstance();
     }
 
-    /**
-     * Get the NationManager
-     *
-     * @return The NationManager
-     */
     public NationManager getNationManager() {
         return NationManager.getInstance();
     }
 
-    /**
-     * Get the ClaimManager
-     *
-     * @return The ClaimManager
-     */
     public ClaimManager getClaimManager() {
         return ClaimManager.getInstance();
     }
 
-    /**
-     * Get a resident by UUID
-     *
-     * @param uuid The player UUID
-     * @return The resident or null if not found
-     */
+    public TaxManager getTaxManager() {
+        return TaxManager.getInstance();
+    }
+
+    // Resident Methods
     public Resident getResident(UUID uuid) {
         return getResidentManager().getResident(uuid);
     }
 
-    /**
-     * Get a resident by player
-     *
-     * @param player The player
-     * @return The resident or null if not found
-     */
     public Resident getResident(Player player) {
         return getResidentManager().getResident(player.getUniqueId());
     }
 
-    /**
-     * Get a town by UUID
-     *
-     * @param uuid The town UUID
-     * @return The town or null if not found
-     */
+    public Resident getResident(String playerName) {
+        return getResidentManager().getResident(playerName);
+    }
+
+    // Town Methods
     public Town getTown(UUID uuid) {
         return getTownManager().getTown(uuid);
     }
 
-    /**
-     * Get a town by name
-     *
-     * @param name The town name
-     * @return The town or null if not found
-     */
     public Town getTown(String name) {
         return getTownManager().getTown(name);
     }
 
-    /**
-     * Get a nation by UUID
-     *
-     * @param uuid The nation UUID
-     * @return The nation or null if not found
-     */
+    public boolean townExists(String name) {
+        return getTownManager().townExists(name);
+    }
+
+    public Map<UUID, Town> getAllTowns() {
+        return getTownManager().getAllTowns();
+    }
+
+    public List<Town> getTownsByNation(UUID nationId) {
+        return getAllTowns().values().stream()
+                .filter(town -> town.hasNation() && town.getNationId().equals(nationId))
+                .collect(Collectors.toList());
+    }
+
+    // Nation Methods
     public Nation getNation(UUID uuid) {
         return getNationManager().getNation(uuid);
     }
 
-    /**
-     * Get a nation by name
-     *
-     * @param name The nation name
-     * @return The nation or null if not found
-     */
     public Nation getNation(String name) {
         return getNationManager().getNation(name);
     }
 
-    /**
-     * Get a claim at a specific chunk
-     *
-     * @param chunk The chunk
-     * @return The claim or null if not claimed
-     */
+    public boolean nationExists(String name) {
+        return getNationManager().nationExists(name);
+    }
+
+    public Map<UUID, Nation> getAllNations() {
+        return getNationManager().getAllNations();
+    }
+
+    // Claim Methods
+    public Claim getClaim(UUID uuid) {
+        return getClaimManager().getClaim(uuid);
+    }
+
     public Claim getClaim(Chunk chunk) {
         return getClaimManager().getClaimAt(chunk);
     }
 
-    /**
-     * Check if a chunk is claimed
-     *
-     * @param chunk The chunk
-     * @return true if claimed, false otherwise
-     */
     public boolean isClaimed(Chunk chunk) {
         return getClaimManager().isClaimed(chunk);
     }
 
-    /**
-     * Get the town that owns a claim at a specific chunk
-     *
-     * @param chunk The chunk
-     * @return Town UUID or null if not claimed
-     */
     public UUID getTownAt(Chunk chunk) {
         return getClaimManager().getTownAt(chunk);
     }
 
-    /**
-     * Check if a player can build in a chunk
-     *
-     * @param chunk The chunk
-     * @param player The player
-     * @return true if allowed, false otherwise
-     */
+    public Map<UUID, Claim> getAllClaims() {
+        return getClaimManager().getAllClaims();
+    }
+
+    // Permission Methods
     public boolean canBuild(Chunk chunk, Player player) {
         return getClaimManager().canBuild(chunk, player.getUniqueId());
     }
 
-    /**
-     * Check if a player can interact with blocks in a chunk
-     *
-     * @param chunk The chunk
-     * @param player The player
-     * @return true if allowed, false otherwise
-     */
     public boolean canInteract(Chunk chunk, Player player) {
         return getClaimManager().canInteract(chunk, player.getUniqueId());
     }
 
-    /**
-     * Check if PvP is allowed in a chunk
-     *
-     * @param chunk The chunk
-     * @return true if PvP allowed, false otherwise
-     */
     public boolean isPvPAllowed(Chunk chunk) {
         return getClaimManager().isPvPAllowed(chunk);
     }
 
-    /**
-     * Check if explosions are allowed in a chunk
-     *
-     * @param chunk The chunk
-     * @return true if explosions allowed, false otherwise
-     */
     public boolean areExplosionsAllowed(Chunk chunk) {
         return getClaimManager().areExplosionsAllowed(chunk);
     }
 
-    /**
-     * Check if mob spawning is allowed in a chunk
-     *
-     * @param chunk The chunk
-     * @return true if mob spawning allowed, false otherwise
-     */
     public boolean isMobSpawningAllowed(Chunk chunk) {
         return getClaimManager().isMobSpawningAllowed(chunk);
     }
 
-    /**
-     * Check if fire spread is allowed in a chunk
-     *
-     * @param chunk The chunk
-     * @return true if fire spread allowed, false otherwise
-     */
     public boolean isFireSpreadAllowed(Chunk chunk) {
         return getClaimManager().isFireSpreadAllowed(chunk);
     }
 
-    /**
-     * Create a town
-     *
-     * @param name Town name
-     * @param founder Founding player
-     * @return The new town, or null if creation failed
-     */
+    // Economy Methods
+    public boolean depositToTownBank(UUID townId, double amount) {
+        return getTownManager().depositToBank(townId, amount);
+    }
+
+    public boolean withdrawFromTownBank(UUID townId, double amount) {
+        return getTownManager().withdrawFromBank(townId, amount);
+    }
+
+    public boolean depositToNationBank(UUID nationId, double amount) {
+        return getNationManager().depositToBank(nationId, amount);
+    }
+
+    public boolean withdrawFromNationBank(UUID nationId, double amount) {
+        return getNationManager().withdrawFromBank(nationId, amount);
+    }
+
+    public double getTownBalance(UUID townId) {
+        Town town = getTown(townId);
+        return town != null ? town.getBankAccount().getBalance() : 0.0;
+    }
+
+    public double getNationBalance(UUID nationId) {
+        Nation nation = getNation(nationId);
+        return nation != null ? nation.getBankAccount().getBalance() : 0.0;
+    }
+
+    // Event-Based Operations (These will fire events)
     public Town createTown(String name, Player founder) {
-        return getTownManager().createTown(name, founder);
+        // Check if town already exists
+        if (townExists(name)) {
+            return null;
+        }
+
+        ResidentManager residentManager = getResidentManager();
+        Resident resident = residentManager.getOrCreateResident(founder);
+
+        // Check if player is already in a town
+        if (resident.hasTown()) {
+            return null;
+        }
+
+        // Fire event
+        Town town = new Town(UUID.randomUUID(), name, resident.getUuid());
+        TownCreateEvent event = new TownCreateEvent(town, founder);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return null;
+        }
+
+        // Proceed with creation
+        if (getTownManager().createTown(name, founder) != null) {
+            return town;
+        }
+
+        return null;
     }
 
-    /**
-     * Delete a town
-     *
-     * @param townId Town UUID
-     * @param deleter Player deleting the town
-     * @return true if successful, false otherwise
-     */
     public boolean deleteTown(UUID townId, Player deleter) {
-        return getTownManager().deleteTown(townId, deleter);
+        Town town = getTown(townId);
+        if (town == null) {
+            return false;
+        }
+
+        // Fire event
+        TownDeleteEvent event = new TownDeleteEvent(town, deleter);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with deletion
+        return getTownManager().deleteTown(townId);
     }
 
-    /**
-     * Create a nation
-     *
-     * @param name Nation name
-     * @param capitalTownId Capital town UUID
-     * @param founderId Founder player UUID
-     * @param founder Founding player
-     * @return The new nation, or null if creation failed
-     */
     public Nation createNation(String name, UUID capitalTownId, UUID founderId, Player founder) {
-        return getNationManager().createNation(name, capitalTownId, founderId, founder);
+        // Check if nation already exists
+        if (nationExists(name)) {
+            return null;
+        }
+
+        Town capitalTown = getTown(capitalTownId);
+        if (capitalTown == null) {
+            return null;
+        }
+
+        // Fire event
+        Nation nation = new Nation(UUID.randomUUID(), name, capitalTownId, founderId);
+        Town capital = getTown(capitalTownId);
+        NationCreateEvent event = new NationCreateEvent(nation, capital, founder);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return null;
+        }
+
+        // Proceed with creation
+        if (getNationManager().createNation(name, capitalTownId, founderId) != null) {
+            return nation;
+        }
+
+        return null;
     }
 
-    /**
-     * Delete a nation
-     *
-     * @param nationId Nation UUID
-     * @param deleter Player deleting the nation
-     * @return true if successful, false otherwise
-     */
     public boolean deleteNation(UUID nationId, Player deleter) {
-        return getNationManager().deleteNation(nationId, deleter);
+        Nation nation = getNation(nationId);
+        if (nation == null) {
+            return false;
+        }
+
+        // Fire event
+        NationDeleteEvent event = new NationDeleteEvent(nation, deleter);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with deletion
+        return getNationManager().deleteNation(nationId);
     }
 
-    /**
-     * Claim a chunk for a town
-     *
-     * @param chunk Chunk to claim
-     * @param townId Town UUID
-     * @param player Player making the claim
-     * @return The new claim, or null if failed
-     */
     public Claim claimChunk(Chunk chunk, UUID townId, Player player) {
-        return getClaimManager().claimChunk(chunk, townId, player);
+        Town town = getTown(townId);
+        if (town == null) {
+            return null;
+        }
+
+        // Check if already claimed
+        if (isClaimed(chunk)) {
+            return null;
+        }
+
+        // Fire event
+        Claim claim = new Claim(UUID.randomUUID(), chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), townId);
+        ClaimAddedEvent event = new ClaimAddedEvent(claim, town, player);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return null;
+        }
+
+        // Proceed with claiming
+        Claim result = getClaimManager().claimChunk(chunk, townId, player);
+        if (result != null) {
+            // Add claim to town
+            getTownManager().addClaim(townId, result.getId());
+        }
+
+        return result;
     }
 
-    /**
-     * Unclaim a chunk
-     *
-     * @param chunk Chunk to unclaim
-     * @param player Player unclaiming
-     * @return true if successful, false otherwise
-     */
     public boolean unclaimChunk(Chunk chunk, Player player) {
+        Claim claim = getClaim(chunk);
+        if (claim == null) {
+            return false;
+        }
+
+        Town town = getTown(claim.getTownId());
+        if (town == null) {
+            return false;
+        }
+
+        // Fire event
+        ClaimRemovedEvent event = new ClaimRemovedEvent(claim, town, player);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with unclaiming
         return getClaimManager().unclaimChunk(chunk, player);
     }
 
-    /**
-     * Set a claim flag
-     *
-     * @param claimId Claim UUID
-     * @param flag Flag to set
-     * @param value Flag value
-     * @return true if successful, false otherwise
-     */
+    public boolean promoteTownResident(UUID promoterId, UUID targetId, Player promoter) {
+        Resident target = getResident(targetId);
+        if (target == null || !target.hasTown()) {
+            return false;
+        }
+
+        Town town = getTown(target.getTownId());
+        if (town == null) {
+            return false;
+        }
+
+        TownRole oldRole = target.getTownRole();
+        TownRole newRole = TownRole.getByLevel(oldRole.getLevel() + 1);
+
+        // Fire event
+        TownPromoteEvent event = new TownPromoteEvent(town, target, promoter, oldRole, newRole);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with promotion
+        return getResidentManager().promoteTownRole(targetId);
+    }
+
+    public boolean demoteTownResident(UUID demoterId, UUID targetId, Player demoter) {
+        Resident target = getResident(targetId);
+        if (target == null || !target.hasTown()) {
+            return false;
+        }
+
+        Town town = getTown(target.getTownId());
+        if (town == null) {
+            return false;
+        }
+
+        TownRole oldRole = target.getTownRole();
+        TownRole newRole = TownRole.getByLevel(oldRole.getLevel() - 1);
+
+        // Fire event
+        TownDemoteEvent event = new TownDemoteEvent(town, target, demoter, oldRole, newRole);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with demotion
+        return getResidentManager().demoteTownRole(targetId);
+    }
+
+    public boolean promoteNationResident(UUID promoterId, UUID targetId, Player promoter) {
+        Resident target = getResident(targetId);
+        if (target == null || !target.hasNation()) {
+            return false;
+        }
+
+        Nation nation = getNation(target.getNationId());
+        if (nation == null) {
+            return false;
+        }
+
+        NationRole oldRole = target.getNationRole();
+        NationRole newRole = NationRole.getByLevel(oldRole.getLevel() + 1);
+
+        // Fire event
+        NationPromoteEvent event = new NationPromoteEvent(nation, target, promoter, oldRole, newRole);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with promotion
+        return getResidentManager().promoteNationRole(targetId);
+    }
+
+    public boolean demoteNationResident(UUID demoterId, UUID targetId, Player demoter) {
+        Resident target = getResident(targetId);
+        if (target == null || !target.hasNation()) {
+            return false;
+        }
+
+        Nation nation = getNation(target.getNationId());
+        if (nation == null) {
+            return false;
+        }
+
+        NationRole oldRole = target.getNationRole();
+        NationRole newRole = NationRole.getByLevel(oldRole.getLevel() - 1);
+
+        // Fire event
+        NationDemoteEvent event = new NationDemoteEvent(nation, target, demoter, oldRole, newRole);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // Proceed with demotion
+        return getResidentManager().demoteNationRole(targetId);
+    }
+
+    // Utility Methods
+    public boolean setTownSpawn(UUID townId, Location location) {
+        return getTownManager().setSpawn(townId, location);
+    }
+
+    public boolean setNationSpawn(UUID nationId, Location location) {
+        return getNationManager().setSpawn(nationId, location);
+    }
+
     public boolean setClaimFlag(UUID claimId, ClaimFlag flag, boolean value) {
         return getClaimManager().setFlag(claimId, flag, value);
     }
 
-    /**
-     * Promote a resident in a town
-     *
-     * @param promoterId Promoter UUID
-     * @param targetId Target UUID
-     * @param promoter Promoter player
-     * @return true if successful, false otherwise
-     */
-    public boolean promoteTownResident(UUID promoterId, UUID targetId, Player promoter) {
-        return getTownManager().promoteResident(promoterId, targetId, promoter);
+    public boolean isPlayerInTown(UUID playerId) {
+        Resident resident = getResident(playerId);
+        return resident != null && resident.hasTown();
     }
 
-    /**
-     * Demote a resident in a town
-     *
-     * @param demoterId Demoter UUID
-     * @param targetId Target UUID
-     * @param demoter Demoter player
-     * @return true if successful, false otherwise
-     */
-    public boolean demoteTownResident(UUID demoterId, UUID targetId, Player demoter) {
-        return getTownManager().demoteResident(demoterId, targetId, demoter);
+    public boolean isPlayerInNation(UUID playerId) {
+        Resident resident = getResident(playerId);
+        return resident != null && resident.hasNation();
     }
 
-    /**
-     * Promote a resident in a nation
-     *
-     * @param promoterId Promoter UUID
-     * @param targetId Target UUID
-     * @param promoter Promoter player
-     * @return true if successful, false otherwise
-     */
-    public boolean promoteNationResident(UUID promoterId, UUID targetId, Player promoter) {
-        return getNationManager().promoteResident(promoterId, targetId, promoter);
+    public UUID getPlayerTownId(UUID playerId) {
+        Resident resident = getResident(playerId);
+        return resident != null && resident.hasTown() ? resident.getTownId() : null;
     }
 
-    /**
-     * Demote a resident in a nation
-     *
-     * @param demoterId Demoter UUID
-     * @param targetId Target UUID
-     * @param demoter Demoter player
-     * @return true if successful, false otherwise
-     */
-    public boolean demoteNationResident(UUID demoterId, UUID targetId, Player demoter) {
-        return getNationManager().demoteResident(demoterId, targetId, demoter);
+    public UUID getPlayerNationId(UUID playerId) {
+        Resident resident = getResident(playerId);
+        return resident != null && resident.hasNation() ? resident.getNationId() : null;
     }
 }

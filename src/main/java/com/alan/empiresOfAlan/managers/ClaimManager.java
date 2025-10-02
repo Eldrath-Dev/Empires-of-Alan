@@ -1,15 +1,12 @@
 package com.alan.empiresOfAlan.managers;
 
-import com.alan.empiresOfAlan.events.claim.ClaimAddedEvent;
-import com.alan.empiresOfAlan.events.claim.ClaimRemovedEvent;
+import com.alan.empiresOfAlan.EmpiresOfAlan;
 import com.alan.empiresOfAlan.model.Claim;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.ClaimFlag;
 import com.alan.empiresOfAlan.model.enums.TownRole;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
@@ -20,6 +17,7 @@ public class ClaimManager {
     private static ClaimManager instance;
     private final Map<UUID, Claim> claims;
     private final Map<String, UUID> locationToClaimId; // "world:x:z" -> claim UUID
+    private EmpiresOfAlan plugin;
 
     private ClaimManager() {
         this.claims = new HashMap<>();
@@ -31,6 +29,15 @@ public class ClaimManager {
             instance = new ClaimManager();
         }
         return instance;
+    }
+
+    /**
+     * Set the plugin reference
+     *
+     * @param plugin The plugin instance
+     */
+    public void setPlugin(EmpiresOfAlan plugin) {
+        this.plugin = plugin;
     }
 
     /**
@@ -89,12 +96,12 @@ public class ClaimManager {
     }
 
     /**
-     * Claim a chunk for a town and fire the ClaimAddedEvent
+     * Claim a chunk for a town
      *
      * @param chunk The chunk to claim
      * @param townId The town claiming it
      * @param player The player making the claim
-     * @return The new claim or null if unsuccessful or event was cancelled
+     * @return The new claim or null if unsuccessful
      */
     public Claim claimChunk(Chunk chunk, UUID townId, Player player) {
         // Check if already claimed
@@ -127,15 +134,6 @@ public class ClaimManager {
         UUID claimId = UUID.randomUUID();
         Claim claim = new Claim(claimId, chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), townId);
 
-        // Fire the event
-        ClaimAddedEvent event = new ClaimAddedEvent(claim, town, player);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return null;
-        }
-
         // Register the claim
         claims.put(claimId, claim);
         locationToClaimId.put(claim.getLocationKey(), claimId);
@@ -147,11 +145,11 @@ public class ClaimManager {
     }
 
     /**
-     * Unclaim a chunk and fire the ClaimRemovedEvent
+     * Unclaim a chunk
      *
      * @param chunk The chunk to unclaim
      * @param player The player doing the unclaiming
-     * @return true if successful, false otherwise or if event was cancelled
+     * @return true if successful, false otherwise
      */
     public boolean unclaimChunk(Chunk chunk, Player player) {
         Claim claim = getClaimAt(chunk);
@@ -169,63 +167,7 @@ public class ClaimManager {
             return false;
         }
 
-        // Get the town
-        TownManager townManager = TownManager.getInstance();
-        Town town = townManager.getTown(claim.getTownId());
-
-        if (town == null) {
-            return false;
-        }
-
-        // Fire the event
-        ClaimRemovedEvent event = new ClaimRemovedEvent(claim, town, player);
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            // Event was cancelled
-            return false;
-        }
-
-        return unclaimChunk(claim.getId(), player);
-    }
-
-    /**
-     * Unclaim a chunk by claim ID and fire the ClaimRemovedEvent
-     *
-     * @param claimId Claim UUID
-     * @param player The player doing the unclaiming, or null if unclaimed by console/system
-     * @return true if successful, false otherwise
-     */
-    public boolean unclaimChunk(UUID claimId, Player player) {
-        Claim claim = getClaim(claimId);
-
-        if (claim == null) {
-            return false;
-        }
-
-        // Get the town
-        TownManager townManager = TownManager.getInstance();
-        Town town = townManager.getTown(claim.getTownId());
-
-        // Fire the event (if town exists)
-        if (town != null && player != null) {
-            ClaimRemovedEvent event = new ClaimRemovedEvent(claim, town, player);
-            Bukkit.getPluginManager().callEvent(event);
-
-            if (event.isCancelled()) {
-                // Event was cancelled
-                return false;
-            }
-
-            // Remove from town
-            town.removeClaim(claimId);
-        }
-
-        // Remove the claim
-        locationToClaimId.remove(claim.getLocationKey());
-        claims.remove(claimId);
-
-        return true;
+        return unclaimChunk(claim.getId());
     }
 
     /**
@@ -235,7 +177,25 @@ public class ClaimManager {
      * @return true if successful, false otherwise
      */
     public boolean unclaimChunk(UUID claimId) {
-        return unclaimChunk(claimId, null);
+        Claim claim = getClaim(claimId);
+
+        if (claim == null) {
+            return false;
+        }
+
+        // Remove from town
+        TownManager townManager = TownManager.getInstance();
+        Town town = townManager.getTown(claim.getTownId());
+
+        if (town != null) {
+            town.removeClaim(claimId);
+        }
+
+        // Remove the claim
+        locationToClaimId.remove(claim.getLocationKey());
+        claims.remove(claimId);
+
+        return true;
     }
 
     /**
@@ -390,5 +350,103 @@ public class ClaimManager {
      */
     public Map<UUID, Claim> getAllClaims() {
         return new HashMap<>(claims);
+    }
+
+    /**
+     * Visualize claim borders with particles
+     *
+     * @param chunk The chunk to visualize
+     * @param duration Duration in seconds
+     */
+    public void visualizeClaim(Chunk chunk) {
+        if (plugin == null) {
+            return;
+        }
+
+        Claim claim = getClaimAt(chunk);
+        if (claim == null) {
+            return;
+        }
+
+        int duration = plugin.getConfigManager().getConfig().getInt("claims.visualization.duration", 10);
+
+        // Schedule particle display
+        Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            int ticks = 0;
+            final int maxTicks = duration * 20; // Convert seconds to ticks
+
+            @Override
+            public void run() {
+                if (ticks >= maxTicks) {
+                    // Cancel the task
+                    return;
+                }
+
+                displayClaimParticles(chunk);
+                ticks++;
+            }
+        }, 0L, 5L); // Run every 5 ticks (0.25 seconds)
+    }
+
+    /**
+     * Display particles around claim borders
+     *
+     * @param chunk The chunk to display particles for
+     */
+    private void displayClaimParticles(Chunk chunk) {
+        World world = chunk.getWorld();
+        int chunkX = chunk.getX() << 4;
+        int chunkZ = chunk.getZ() << 4;
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
+
+        // Get particle type from config
+        String particleName = plugin != null ?
+                plugin.getConfigManager().getConfig().getString("claims.visualization.particle-type", "FLAME") :
+                "FLAME";
+        Particle particleType;
+        try {
+            particleType = Particle.valueOf(particleName);
+        } catch (IllegalArgumentException e) {
+            particleType = Particle.FLAME;
+        }
+
+        // Display particles at the four corners
+        for (int y = minY; y <= maxY; y += 2) {
+            // Corner particles
+            world.spawnParticle(particleType, chunkX, y, chunkZ, 1, 0, 0, 0, 0);
+            world.spawnParticle(particleType, chunkX + 16, y, chunkZ, 1, 0, 0, 0, 0);
+            world.spawnParticle(particleType, chunkX, y, chunkZ + 16, 1, 0, 0, 0, 0);
+            world.spawnParticle(particleType, chunkX + 16, y, chunkZ + 16, 1, 0, 0, 0, 0);
+
+            // Border particles (every 4 blocks)
+            for (int x = 0; x <= 16; x += 4) {
+                world.spawnParticle(particleType, chunkX + x, y, chunkZ, 1, 0, 0, 0, 0);
+                world.spawnParticle(particleType, chunkX + x, y, chunkZ + 16, 1, 0, 0, 0, 0);
+            }
+
+            for (int z = 0; z <= 16; z += 4) {
+                world.spawnParticle(particleType, chunkX, y, chunkZ + z, 1, 0, 0, 0, 0);
+                world.spawnParticle(particleType, chunkX + 16, y, chunkZ + z, 1, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    /**
+     * Get the internal claims map (for database access)
+     *
+     * @return The claims map
+     */
+    public Map<UUID, Claim> getClaims() {
+        return claims;
+    }
+
+    /**
+     * Get the internal location to claim ID map (for database access)
+     *
+     * @return The location to claim ID map
+     */
+    public Map<String, UUID> getLocationToClaimId() {
+        return locationToClaimId;
     }
 }

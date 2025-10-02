@@ -7,6 +7,10 @@ general:
   player-only: "&cThis command can only be used by players."
   command-error: "&cAn error occurred while executing the command."
   not-implemented: "&cThis feature is not implemented yet."
+  usage: "&cUsage: {0}"
+  invalid-amount: "&cInvalid amount."
+  insufficient-funds: "&cYou don't have enough money."
+  transaction-failed: "&cTransaction failed. Your money has not been withdrawn."
 
 residents:
   not-found: "&cResident not found."
@@ -29,12 +33,20 @@ towns:
   teleported: "&aTeleported to town: &e{0}"
   max-claims-reached: "&cThis town has reached its maximum claim limit."
   deposit-success: "&aDeposited &e{0} &ainto the town bank."
+  deposit-failed: "&cFailed to deposit to town bank."
   withdraw-success: "&aWithdrew &e{0} &afrom the town bank."
+  withdraw-failed: "&cFailed to withdraw from town bank."
   insufficient-funds: "&cInsufficient funds in the town bank."
   tax-rate-set: "&aTown tax rate set to &e{0}%"
   chat-enabled: "&aTown chat enabled."
   chat-disabled: "&aTown chat disabled."
   chat-format: "&b[Town] &f{0}: &7{1}"
+  name-invalid-length: "&cTown name must be between {0} and {1} characters."
+  name-invalid-chars: "&cTown name contains invalid characters."
+  creation-failed: "&cFailed to create town. You may already be in a town."
+  delete-confirm: "&cAre you sure you want to delete your town? This action cannot be undone. Type &e/town delete confirm &cto confirm."
+  deletion-failed: "&cFailed to delete town."
+  not-owner: "&cOnly the town owner can delete the town."
 
 nations:
   created: "&aSuccessfully created nation: &e{0}"
@@ -50,12 +62,18 @@ nations:
   teleported: "&aTeleported to nation: &e{0}"
   capital-changed: "&aThe capital of nation &e{0} &ahas been changed to &e{1}"
   deposit-success: "&aDeposited &e{0} &ainto the nation bank."
+  deposit-failed: "&cFailed to deposit to nation bank."
   withdraw-success: "&aWithdrew &e{0} &afrom the nation bank."
+  withdraw-failed: "&cFailed to withdraw from nation bank."
   insufficient-funds: "&cInsufficient funds in the nation bank."
   tax-rate-set: "&aNation tax rate set to &e{0}%"
   chat-enabled: "&aNation chat enabled."
   chat-disabled: "&aNation chat disabled."
   chat-format: "&9[Nation] &f{0}: &7{1}"
+  must-be-town-owner: "&cYou must be a town owner to create a nation."
+  town-already-in-nation: "&cYour town is already part of a nation."
+  creation-failed: "&cFailed to create nation."
+  not-in-nation: "&cYou are not in a nation."
 
 claims:
   claimed: "&aChunk claimed for town: &e{0}"
@@ -67,6 +85,8 @@ claims:
   visualize-started: "&aShowing claim borders for &e{0} &aseconds."
   cannot-build: "&cYou cannot build in this area."
   cannot-interact: "&cYou cannot interact with blocks in this area."
+  pvp-disabled: "&cPvP is disabled in this area."
+  claim-failed: "&cFailed to claim this chunk."
   town-required: "&cYou need to be in a town to claim land."
 
 taxes:
@@ -75,6 +95,8 @@ taxes:
   nation-paid: "&6Your town paid &e{0} &6in nation taxes to &e{1}"
   nation-collected: "&6Your nation collected &e{0} &6in taxes."
   failed-to-pay: "&cYour town failed to pay &e{0} &cin nation taxes."
+  cannot-afford: "&cYou could not afford to pay &e{0} &cin town taxes."
+  town-defaulted: "&cTown &e{0} &cfailed to pay &e{1} &cin nation taxes."
 
 teleport:
   warmup: "&6Teleporting in &e{0} &6seconds. Don't move!"

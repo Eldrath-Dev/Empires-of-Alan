@@ -65,11 +65,12 @@ public class ChatListener implements Listener {
             return;
         }
 
-        // Format message
+        // Format message with town name
         String format = configManager.getMessage("towns.chat-format",
-                        "§b[Town] §f{0}: §7{1}")
-                .replace("{0}", sender.getName())
-                .replace("{1}", message);
+                        "&b[{0}] &f{1}: &7{2}")
+                .replace("{0}", town.getName())
+                .replace("{1}", sender.getName())
+                .replace("{2}", message);
 
         // Send to all town members
         for (UUID memberId : town.getResidents()) {
@@ -91,11 +92,12 @@ public class ChatListener implements Listener {
             return;
         }
 
-        // Format message
+        // Format message with nation name
         String format = configManager.getMessage("nations.chat-format",
-                        "§9[Nation] §f{0}: §7{1}")
-                .replace("{0}", sender.getName())
-                .replace("{1}", message);
+                        "&9[{0}] &f{1}: &7{2}")
+                .replace("{0}", nation.getName())
+                .replace("{1}", sender.getName())
+                .replace("{2}", message);
 
         // Send to all nation members
         TownManager townManager = TownManager.getInstance();

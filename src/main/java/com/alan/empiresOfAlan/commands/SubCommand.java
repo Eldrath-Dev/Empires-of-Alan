@@ -84,7 +84,7 @@ public abstract class SubCommand {
      * @param sender The command sender
      */
     protected void sendUsage(CommandSender sender) {
-        sender.sendMessage(configManager.getMessage("general.usage", "§cUsage: {0}").replace("{0}", getUsage()));
+        sender.sendMessage(configManager.getMessage("general.usage", "&cUsage: {0}").replace("{0}", getUsage()));
     }
 
     /**

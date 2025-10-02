@@ -1,5 +1,6 @@
 package com.alan.empiresOfAlan.util;
 
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -94,27 +95,28 @@ public class ConfigManager {
     }
 
     /**
-     * Get a message from the language file
+     * Get a message from the language file and process color codes
      *
      * @param lang Language code
      * @param path Message path
      * @param defaultMsg Default message if not found
-     * @return The message
+     * @return The message with processed color codes
      */
     public String getMessage(String lang, String path, String defaultMsg) {
         FileConfiguration langConfig = languageFiles.get(lang);
         if (langConfig == null) {
-            return defaultMsg;
+            return ChatColor.translateAlternateColorCodes('&', defaultMsg);
         }
-        return langConfig.getString(path, defaultMsg);
+        String message = langConfig.getString(path, defaultMsg);
+        return ChatColor.translateAlternateColorCodes('&', message);
     }
 
     /**
-     * Get a message from the default language file (en_US)
+     * Get a message from the default language file (en_US) and process color codes
      *
      * @param path Message path
      * @param defaultMsg Default message if not found
-     * @return The message
+     * @return The message with processed color codes
      */
     public String getMessage(String path, String defaultMsg) {
         return getMessage("en_US", path, defaultMsg);

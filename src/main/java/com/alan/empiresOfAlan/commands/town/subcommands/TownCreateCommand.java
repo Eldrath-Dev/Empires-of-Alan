@@ -19,6 +19,7 @@ public class TownCreateCommand extends SubCommand {
     public boolean execute(CommandSender sender, String[] args) {
         Player player = getPlayer(sender);
         if (player == null) {
+            sender.sendMessage(configManager.getMessage("general.player-only", "&cThis command can only be used by players."));
             return false;
         }
 
@@ -36,7 +37,7 @@ public class TownCreateCommand extends SubCommand {
 
         if (townName.length() < minLength || townName.length() > maxLength) {
             player.sendMessage(configManager.getMessage("towns.name-invalid-length",
-                            "§cTown name must be between {0} and {1} characters.")
+                            "&cTown name must be between {0} and {1} characters.")
                     .replace("{0}", String.valueOf(minLength))
                     .replace("{1}", String.valueOf(maxLength)));
             return false;
@@ -44,7 +45,7 @@ public class TownCreateCommand extends SubCommand {
 
         if (!Pattern.matches(nameRegex, townName)) {
             player.sendMessage(configManager.getMessage("towns.name-invalid-chars",
-                    "§cTown name contains invalid characters."));
+                    "&cTown name contains invalid characters."));
             return false;
         }
 
@@ -52,20 +53,20 @@ public class TownCreateCommand extends SubCommand {
         TownManager townManager = TownManager.getInstance();
         if (townManager.townExists(townName)) {
             player.sendMessage(configManager.getMessage("towns.already-exists",
-                    "§cA town with that name already exists."));
+                    "&cA town with that name already exists."));
             return false;
         }
 
-        // Create the town (now with event support)
+        // Create the town
         Town town = townManager.createTown(townName, player);
         if (town == null) {
             player.sendMessage(configManager.getMessage("towns.creation-failed",
-                    "§cFailed to create town. You may already be in a town or the event was cancelled."));
+                    "&cFailed to create town. You may already be in a town."));
             return false;
         }
 
         player.sendMessage(configManager.getMessage("towns.created",
-                        "§aSuccessfully created town: §e{0}")
+                        "&aSuccessfully created town: &e{0}")
                 .replace("{0}", townName));
 
         return true;

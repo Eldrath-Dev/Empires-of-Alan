@@ -23,6 +23,7 @@ public class TownClaimCommand extends SubCommand {
     public boolean execute(CommandSender sender, String[] args) {
         Player player = getPlayer(sender);
         if (player == null) {
+            sender.sendMessage(configManager.getMessage("general.player-only", "&cThis command can only be used by players."));
             return false;
         }
 
@@ -32,14 +33,14 @@ public class TownClaimCommand extends SubCommand {
 
         if (resident == null || !resident.hasTown()) {
             player.sendMessage(configManager.getMessage("towns.not-in-town",
-                    "§cYou are not in a town."));
+                    "&cYou are not in a town."));
             return false;
         }
 
         // Check if player has claim permission (Knight+)
         if (!resident.hasTownPermission(TownRole.KNIGHT)) {
             player.sendMessage(configManager.getMessage("towns.not-enough-permissions",
-                    "§cYou don't have enough permissions in your town."));
+                    "&cYou don't have enough permissions in your town."));
             return false;
         }
 
@@ -49,14 +50,14 @@ public class TownClaimCommand extends SubCommand {
 
         if (town == null) {
             player.sendMessage(configManager.getMessage("towns.not-found",
-                    "§cTown not found."));
+                    "&cTown not found."));
             return false;
         }
 
         // Check if town can claim more chunks
         if (!town.canClaimMore()) {
             player.sendMessage(configManager.getMessage("towns.max-claims-reached",
-                    "§cThis town has reached its maximum claim limit."));
+                    "&cThis town has reached its maximum claim limit."));
             return false;
         }
 
@@ -66,20 +67,29 @@ public class TownClaimCommand extends SubCommand {
 
         if (claimManager.isClaimed(chunk)) {
             player.sendMessage(configManager.getMessage("claims.already-claimed",
-                    "§cThis chunk is already claimed."));
+                    "&cThis chunk is already claimed."));
             return false;
         }
 
         Claim claim = claimManager.claimChunk(chunk, town.getId(), player);
         if (claim == null) {
             player.sendMessage(configManager.getMessage("claims.claim-failed",
-                    "§cFailed to claim this chunk."));
+                    "&cFailed to claim this chunk."));
             return false;
         }
 
         player.sendMessage(configManager.getMessage("claims.claimed",
-                        "§aChunk claimed for town: §e{0}")
+                        "&aChunk claimed for town: &e{0}")
                 .replace("{0}", town.getName()));
+
+        // Visualize the claim if enabled
+        if (configManager.getConfig().getBoolean("claims.visualization.enabled", true)) {
+            claimManager.visualizeClaim(chunk);
+            int duration = configManager.getConfig().getInt("claims.visualization.duration", 10);
+            player.sendMessage(configManager.getMessage("claims.visualize-started",
+                            "&aShowing claim borders for &e{0} &aseconds.")
+                    .replace("{0}", String.valueOf(duration)));
+        }
 
         return true;
     }

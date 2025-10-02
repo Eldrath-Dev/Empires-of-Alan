@@ -326,4 +326,13 @@ public class ResidentManager {
     public Map<UUID, Resident> getAllResidents() {
         return new HashMap<>(residents);
     }
+
+    /**
+     * Get the internal residents map (for database access)
+     *
+     * @return The residents map
+     */
+    public Map<UUID, Resident> getResidents() {
+        return residents;
+    }
 }

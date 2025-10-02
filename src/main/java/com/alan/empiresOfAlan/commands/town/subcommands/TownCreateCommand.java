@@ -56,11 +56,11 @@ public class TownCreateCommand extends SubCommand {
             return false;
         }
 
-        // Create the town
+        // Create the town (now with event support)
         Town town = townManager.createTown(townName, player);
         if (town == null) {
             player.sendMessage(configManager.getMessage("towns.creation-failed",
-                    "§cFailed to create town. You may already be in a town."));
+                    "§cFailed to create town. You may already be in a town or the event was cancelled."));
             return false;
         }
 

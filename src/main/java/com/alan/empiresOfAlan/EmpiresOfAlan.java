@@ -1,5 +1,6 @@
 package com.alan.empiresOfAlan;
 
+import com.alan.empiresOfAlan.api.EmpiresOfAlanAPI;
 import com.alan.empiresOfAlan.commands.CommandManager;
 import com.alan.empiresOfAlan.database.SQLiteManager;
 import com.alan.empiresOfAlan.listeners.ChatListener;
@@ -137,5 +138,14 @@ public class EmpiresOfAlan extends JavaPlugin {
      */
     public AsyncExecutor getAsyncExecutor() {
         return asyncExecutor;
+    }
+
+    /**
+     * Get the plugin API
+     *
+     * @return The API instance
+     */
+    public EmpiresOfAlanAPI getAPI() {
+        return EmpiresOfAlanAPI.getInstance(this);
     }
 }

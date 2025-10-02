@@ -1,11 +1,15 @@
 package com.alan.empiresOfAlan.managers;
 
+import com.alan.empiresOfAlan.events.claim.ClaimAddedEvent;
+import com.alan.empiresOfAlan.events.claim.ClaimRemovedEvent;
 import com.alan.empiresOfAlan.model.Claim;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.ClaimFlag;
 import com.alan.empiresOfAlan.model.enums.TownRole;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
@@ -85,12 +89,12 @@ public class ClaimManager {
     }
 
     /**
-     * Claim a chunk for a town
+     * Claim a chunk for a town and fire the ClaimAddedEvent
      *
      * @param chunk The chunk to claim
      * @param townId The town claiming it
      * @param player The player making the claim
-     * @return The new claim or null if unsuccessful
+     * @return The new claim or null if unsuccessful or event was cancelled
      */
     public Claim claimChunk(Chunk chunk, UUID townId, Player player) {
         // Check if already claimed
@@ -123,6 +127,15 @@ public class ClaimManager {
         UUID claimId = UUID.randomUUID();
         Claim claim = new Claim(claimId, chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), townId);
 
+        // Fire the event
+        ClaimAddedEvent event = new ClaimAddedEvent(claim, town, player);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            // Event was cancelled
+            return null;
+        }
+
         // Register the claim
         claims.put(claimId, claim);
         locationToClaimId.put(claim.getLocationKey(), claimId);
@@ -134,11 +147,11 @@ public class ClaimManager {
     }
 
     /**
-     * Unclaim a chunk
+     * Unclaim a chunk and fire the ClaimRemovedEvent
      *
      * @param chunk The chunk to unclaim
      * @param player The player doing the unclaiming
-     * @return true if successful, false otherwise
+     * @return true if successful, false otherwise or if event was cancelled
      */
     public boolean unclaimChunk(Chunk chunk, Player player) {
         Claim claim = getClaimAt(chunk);
@@ -156,7 +169,63 @@ public class ClaimManager {
             return false;
         }
 
-        return unclaimChunk(claim.getId());
+        // Get the town
+        TownManager townManager = TownManager.getInstance();
+        Town town = townManager.getTown(claim.getTownId());
+
+        if (town == null) {
+            return false;
+        }
+
+        // Fire the event
+        ClaimRemovedEvent event = new ClaimRemovedEvent(claim, town, player);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) {
+            // Event was cancelled
+            return false;
+        }
+
+        return unclaimChunk(claim.getId(), player);
+    }
+
+    /**
+     * Unclaim a chunk by claim ID and fire the ClaimRemovedEvent
+     *
+     * @param claimId Claim UUID
+     * @param player The player doing the unclaiming, or null if unclaimed by console/system
+     * @return true if successful, false otherwise
+     */
+    public boolean unclaimChunk(UUID claimId, Player player) {
+        Claim claim = getClaim(claimId);
+
+        if (claim == null) {
+            return false;
+        }
+
+        // Get the town
+        TownManager townManager = TownManager.getInstance();
+        Town town = townManager.getTown(claim.getTownId());
+
+        // Fire the event (if town exists)
+        if (town != null && player != null) {
+            ClaimRemovedEvent event = new ClaimRemovedEvent(claim, town, player);
+            Bukkit.getPluginManager().callEvent(event);
+
+            if (event.isCancelled()) {
+                // Event was cancelled
+                return false;
+            }
+
+            // Remove from town
+            town.removeClaim(claimId);
+        }
+
+        // Remove the claim
+        locationToClaimId.remove(claim.getLocationKey());
+        claims.remove(claimId);
+
+        return true;
     }
 
     /**
@@ -166,25 +235,7 @@ public class ClaimManager {
      * @return true if successful, false otherwise
      */
     public boolean unclaimChunk(UUID claimId) {
-        Claim claim = getClaim(claimId);
-
-        if (claim == null) {
-            return false;
-        }
-
-        // Remove from town
-        TownManager townManager = TownManager.getInstance();
-        Town town = townManager.getTown(claim.getTownId());
-
-        if (town != null) {
-            town.removeClaim(claimId);
-        }
-
-        // Remove the claim
-        locationToClaimId.remove(claim.getLocationKey());
-        claims.remove(claimId);
-
-        return true;
+        return unclaimChunk(claimId, null);
     }
 
     /**

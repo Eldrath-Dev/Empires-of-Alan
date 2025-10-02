@@ -2,29 +2,26 @@ package com.alan.empiresOfAlan.events.nation;
 
 import com.alan.empiresOfAlan.events.EmpireEvent;
 import com.alan.empiresOfAlan.model.Nation;
-import com.alan.empiresOfAlan.model.Town;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 
 /**
- * Event that is called when a nation is created
+ * Event that is called when a nation is deleted
  */
-public class NationCreateEvent extends EmpireEvent implements Cancellable {
+public class NationDeleteEvent extends EmpireEvent implements Cancellable {
     private final Nation nation;
-    private final Town capital;
-    private final Player creator;
+    private final Player deleter;
     private boolean cancelled;
 
-    public NationCreateEvent(Nation nation, Town capital, Player creator) {
+    public NationDeleteEvent(Nation nation, Player deleter) {
         super(false); // Sync event
         this.nation = nation;
-        this.capital = capital;
-        this.creator = creator;
+        this.deleter = deleter;
         this.cancelled = false;
     }
 
     /**
-     * Get the nation being created
+     * Get the nation being deleted
      *
      * @return The nation
      */
@@ -33,21 +30,12 @@ public class NationCreateEvent extends EmpireEvent implements Cancellable {
     }
 
     /**
-     * Get the capital town of the nation
+     * Get the player deleting the nation
      *
-     * @return The capital town
+     * @return The deleter, or null if deleted by console/system
      */
-    public Town getCapital() {
-        return capital;
-    }
-
-    /**
-     * Get the player creating the nation
-     *
-     * @return The creator
-     */
-    public Player getCreator() {
-        return creator;
+    public Player getDeleter() {
+        return deleter;
     }
 
     @Override

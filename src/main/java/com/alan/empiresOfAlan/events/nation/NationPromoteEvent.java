@@ -1,16 +1,18 @@
 package com.alan.empiresOfAlan.events.nation;
 
-import com.alan.empiresOfAlan.events.EmpireEvent;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.enums.NationRole;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 /**
  * Event that is called when a resident is promoted in a nation
  */
-public class NationPromoteEvent extends EmpireEvent implements Cancellable {
+public class NationPromoteEvent extends Event implements Cancellable {
+    private static final HandlerList HANDLERS = new HandlerList();
     private final Nation nation;
     private final Resident resident;
     private final Player promoter;
@@ -19,7 +21,6 @@ public class NationPromoteEvent extends EmpireEvent implements Cancellable {
     private boolean cancelled;
 
     public NationPromoteEvent(Nation nation, Resident resident, Player promoter, NationRole oldRole, NationRole newRole) {
-        super(false); // Sync event
         this.nation = nation;
         this.resident = resident;
         this.promoter = promoter;
@@ -81,5 +82,14 @@ public class NationPromoteEvent extends EmpireEvent implements Cancellable {
     @Override
     public void setCancelled(boolean cancelled) {
         this.cancelled = cancelled;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return HANDLERS;
+    }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
     }
 }

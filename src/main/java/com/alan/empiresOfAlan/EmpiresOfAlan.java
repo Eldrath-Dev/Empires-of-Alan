@@ -3,6 +3,7 @@ package com.alan.empiresOfAlan;
 import com.alan.empiresOfAlan.api.EmpiresOfAlanAPI;
 import com.alan.empiresOfAlan.commands.CommandManager;
 import com.alan.empiresOfAlan.database.SQLiteManager;
+import com.alan.empiresOfAlan.integrations.VaultIntegration;
 import com.alan.empiresOfAlan.listeners.ChatListener;
 import com.alan.empiresOfAlan.listeners.ClaimListener;
 import com.alan.empiresOfAlan.listeners.PlayerListener;
@@ -20,6 +21,7 @@ public class EmpiresOfAlan extends JavaPlugin {
     private SQLiteManager sqliteManager;
     private AsyncExecutor asyncExecutor;
     private CommandManager commandManager;
+    private VaultIntegration vaultIntegration;
     private BukkitTask taxTask;
 
     @Override
@@ -44,6 +46,9 @@ public class EmpiresOfAlan extends JavaPlugin {
 
         // Initialize managers
         initializeManagers();
+
+        // Initialize Vault integration
+        this.vaultIntegration = VaultIntegration.getInstance(this);
 
         // Register commands
         this.commandManager = new CommandManager(this);
@@ -92,7 +97,10 @@ public class EmpiresOfAlan extends JavaPlugin {
             TownManager.getInstance();
             NationManager.getInstance();
             ClaimManager.getInstance();
-            TaxManager.getInstance().loadConfig(configManager);
+
+            TaxManager taxManager = TaxManager.getInstance();
+            taxManager.loadConfig(configManager);
+            taxManager.setPlugin(this);
 
             getLogger().info("All managers initialized successfully!");
         } catch (Exception e) {
@@ -138,6 +146,15 @@ public class EmpiresOfAlan extends JavaPlugin {
      */
     public AsyncExecutor getAsyncExecutor() {
         return asyncExecutor;
+    }
+
+    /**
+     * Get the Vault integration
+     *
+     * @return The VaultIntegration instance
+     */
+    public VaultIntegration getVaultIntegration() {
+        return vaultIntegration;
     }
 
     /**

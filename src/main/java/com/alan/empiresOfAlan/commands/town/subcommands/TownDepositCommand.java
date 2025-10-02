@@ -2,6 +2,7 @@ package com.alan.empiresOfAlan.commands.town.subcommands;
 
 import com.alan.empiresOfAlan.EmpiresOfAlan;
 import com.alan.empiresOfAlan.commands.SubCommand;
+import com.alan.empiresOfAlan.integrations.VaultIntegration;
 import com.alan.empiresOfAlan.managers.ResidentManager;
 import com.alan.empiresOfAlan.managers.TownManager;
 import com.alan.empiresOfAlan.model.Resident;
@@ -53,10 +54,17 @@ public class TownDepositCommand extends SubCommand {
             return false;
         }
 
-        // TODO: Implement Vault integration to check player balance
-        // For now, we'll assume the player has enough money
+        // Get Vault integration
+        VaultIntegration vaultIntegration = plugin.getVaultIntegration();
 
-        // Deposit to town bank
+        // Check if player has enough money
+        if (!vaultIntegration.has(player, amount)) {
+            player.sendMessage(configManager.getMessage("general.insufficient-funds",
+                    "§cYou don't have enough money."));
+            return false;
+        }
+
+        // Get the town
         TownManager townManager = TownManager.getInstance();
         Town town = townManager.getTown(resident.getTownId());
 
@@ -66,17 +74,23 @@ public class TownDepositCommand extends SubCommand {
             return false;
         }
 
-        // TODO: Implement Vault integration to withdraw from player
-        // For now, we'll just add to the town bank
-
-        if (townManager.depositToBank(town.getId(), amount)) {
-            player.sendMessage(configManager.getMessage("towns.deposit-success",
-                            "§aDeposited §e{0} §ainto the town bank.")
-                    .replace("{0}", String.format("%.2f", amount)));
-            return true;
+        // Withdraw from player and deposit to town bank
+        if (vaultIntegration.withdraw(player, amount)) {
+            if (townManager.depositToBank(town.getId(), amount)) {
+                player.sendMessage(configManager.getMessage("towns.deposit-success",
+                                "§aDeposited §e{0} §ainto the town bank.")
+                        .replace("{0}", vaultIntegration.format(amount)));
+                return true;
+            } else {
+                // Refund the player if town deposit failed
+                vaultIntegration.deposit(player, amount);
+                player.sendMessage(configManager.getMessage("towns.deposit-failed",
+                        "§cFailed to deposit to town bank."));
+                return false;
+            }
         } else {
-            player.sendMessage(configManager.getMessage("towns.deposit-failed",
-                    "§cFailed to deposit to town bank."));
+            player.sendMessage(configManager.getMessage("general.transaction-failed",
+                    "§cTransaction failed. Your money has not been withdrawn."));
             return false;
         }
     }

@@ -2,6 +2,7 @@ package com.alan.empiresOfAlan.commands.nation.subcommands;
 
 import com.alan.empiresOfAlan.EmpiresOfAlan;
 import com.alan.empiresOfAlan.commands.SubCommand;
+import com.alan.empiresOfAlan.integrations.VaultIntegration;
 import com.alan.empiresOfAlan.managers.NationManager;
 import com.alan.empiresOfAlan.managers.ResidentManager;
 import com.alan.empiresOfAlan.model.Nation;
@@ -61,7 +62,7 @@ public class NationWithdrawCommand extends SubCommand {
             return false;
         }
 
-        // Withdraw from nation bank
+        // Get the nation
         NationManager nationManager = NationManager.getInstance();
         Nation nation = nationManager.getNation(resident.getNationId());
 
@@ -71,20 +72,30 @@ public class NationWithdrawCommand extends SubCommand {
             return false;
         }
 
+        // Check if nation has enough money
         if (nation.getBankAccount().getBalance() < amount) {
             player.sendMessage(configManager.getMessage("nations.insufficient-funds",
                     "§cInsufficient funds in the nation bank."));
             return false;
         }
 
-        if (nationManager.withdrawFromBank(nation.getId(), amount)) {
-            // TODO: Implement Vault integration to give money to player
-            // For now, we'll just remove from the nation bank
+        // Get Vault integration
+        VaultIntegration vaultIntegration = plugin.getVaultIntegration();
 
-            player.sendMessage(configManager.getMessage("nations.withdraw-success",
-                            "§aWithdrew §e{0} §afrom the nation bank.")
-                    .replace("{0}", String.format("%.2f", amount)));
-            return true;
+        // Withdraw from nation bank and deposit to player
+        if (nationManager.withdrawFromBank(nation.getId(), amount)) {
+            if (vaultIntegration.deposit(player, amount)) {
+                player.sendMessage(configManager.getMessage("nations.withdraw-success",
+                                "§aWithdrew §e{0} §afrom the nation bank.")
+                        .replace("{0}", vaultIntegration.format(amount)));
+                return true;
+            } else {
+                // Refund the nation bank if player deposit failed
+                nationManager.depositToBank(nation.getId(), amount);
+                player.sendMessage(configManager.getMessage("nations.withdraw-failed",
+                        "§cFailed to withdraw from nation bank."));
+                return false;
+            }
         } else {
             player.sendMessage(configManager.getMessage("nations.withdraw-failed",
                     "§cFailed to withdraw from nation bank."));

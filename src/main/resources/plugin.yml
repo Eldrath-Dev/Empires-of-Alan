@@ -16,6 +16,7 @@ commands:
     aliases: [n]
     usage: /<command> [subcommand] [args]
 
+
 permissions:
   empiresofalan.admin:
     description: Gives access to all EmpiresOfAlan commands

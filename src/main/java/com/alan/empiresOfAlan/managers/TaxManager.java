@@ -1,5 +1,7 @@
 package com.alan.empiresOfAlan.managers;
 
+import com.alan.empiresOfAlan.EmpiresOfAlan;
+import com.alan.empiresOfAlan.integrations.VaultIntegration;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
@@ -16,6 +18,7 @@ public class TaxManager {
     private long townTaxInterval; // in milliseconds
     private long nationTaxInterval; // in milliseconds
     private boolean taxesEnabled;
+    private EmpiresOfAlan plugin;
 
     private TaxManager() {
         this.townTaxInterval = TimeUnit.DAYS.toMillis(1); // Default: 1 day
@@ -42,10 +45,19 @@ public class TaxManager {
     }
 
     /**
+     * Set the plugin reference
+     *
+     * @param plugin The plugin instance
+     */
+    public void setPlugin(EmpiresOfAlan plugin) {
+        this.plugin = plugin;
+    }
+
+    /**
      * Check and collect taxes for all towns and nations
      */
     public void checkAndCollectTaxes() {
-        if (!taxesEnabled) {
+        if (!taxesEnabled || plugin == null) {
             return;
         }
 
@@ -85,6 +97,8 @@ public class TaxManager {
         }
 
         ResidentManager residentManager = ResidentManager.getInstance();
+        VaultIntegration vaultIntegration = plugin.getVaultIntegration();
+        double totalCollected = 0;
 
         for (UUID residentId : town.getResidents()) {
             Resident resident = residentManager.getResident(residentId);
@@ -98,19 +112,45 @@ public class TaxManager {
                 continue;
             }
 
+            // Calculate tax amount
+            double taxAmount = town.getTaxRate();
+
             // Get the player if online
             Player player = Bukkit.getPlayer(residentId);
 
-            if (player != null && player.isOnline()) {
-                // TODO: Implement Vault integration to withdraw money
-                // For now, we'll just assume taxes are collected
-                double taxAmount = town.getTaxRate();
+            // Check if resident can afford the tax (online or offline)
+            if (vaultIntegration.has(residentId, taxAmount)) {
+                // Withdraw tax from resident
+                if (vaultIntegration.withdraw(residentId, taxAmount)) {
+                    // Add to town bank
+                    town.getBankAccount().deposit(taxAmount);
+                    totalCollected += taxAmount;
 
-                // Add to town bank
-                town.getBankAccount().deposit(taxAmount);
+                    // Notify the player if online
+                    if (player != null && player.isOnline()) {
+                        player.sendMessage(plugin.getConfigManager().getMessage("taxes.town-paid",
+                                        "§6You paid §e{0} §6in town taxes to §e{1}")
+                                .replace("{0}", vaultIntegration.format(taxAmount))
+                                .replace("{1}", town.getName()));
+                    }
+                }
+            } else {
+                // Notify player they couldn't afford taxes
+                if (player != null && player.isOnline()) {
+                    player.sendMessage(plugin.getConfigManager().getMessage("taxes.cannot-afford",
+                                    "§cYou could not afford to pay §e{0} §cin town taxes.")
+                            .replace("{0}", vaultIntegration.format(taxAmount)));
+                }
+            }
+        }
 
-                // Notify the player
-                player.sendMessage("§6You paid §e" + taxAmount + " §6in town taxes to §e" + town.getName());
+        // Notify town owner of total taxes collected
+        if (totalCollected > 0) {
+            Player owner = Bukkit.getPlayer(town.getOwnerId());
+            if (owner != null && owner.isOnline()) {
+                owner.sendMessage(plugin.getConfigManager().getMessage("taxes.town-collected",
+                                "§6Your town collected §e{0} §6in taxes.")
+                        .replace("{0}", vaultIntegration.format(totalCollected)));
             }
         }
     }
@@ -126,6 +166,7 @@ public class TaxManager {
         }
 
         TownManager townManager = TownManager.getInstance();
+        double totalCollected = 0;
 
         for (UUID townId : nation.getTowns()) {
             Town town = townManager.getTown(townId);
@@ -145,17 +186,76 @@ public class TaxManager {
             // Check if town can afford the tax
             if (town.getBankAccount().hasFunds(taxAmount)) {
                 // Withdraw from town bank
-                town.getBankAccount().withdraw(taxAmount);
+                if (town.getBankAccount().withdraw(taxAmount)) {
+                    // Add to nation bank
+                    nation.getBankAccount().deposit(taxAmount);
+                    totalCollected += taxAmount;
 
-                // Add to nation bank
-                nation.getBankAccount().deposit(taxAmount);
-
-                // TODO: Notify town members
+                    // Notify town members
+                    notifyTownOfNationTax(town, nation, taxAmount);
+                }
             } else {
-                // TODO: Handle town not being able to pay taxes
-                // For now, we'll just skip taxing
+                // Town cannot afford the tax - apply penalties or take other actions
+                handleTownTaxDefault(town, nation, taxAmount);
             }
         }
+
+        // Notify nation leader of total taxes collected
+        if (totalCollected > 0) {
+            Player leader = Bukkit.getPlayer(nation.getLeaderId());
+            if (leader != null && leader.isOnline()) {
+                leader.sendMessage(plugin.getConfigManager().getMessage("taxes.nation-collected",
+                                "§6Your nation collected §e{0} §6in taxes.")
+                        .replace("{0}", plugin.getVaultIntegration().format(totalCollected)));
+            }
+        }
+    }
+
+    /**
+     * Notify town members of nation tax payment
+     *
+     * @param town The town
+     * @param nation The nation
+     * @param amount The tax amount
+     */
+    private void notifyTownOfNationTax(Town town, Nation nation, double amount) {
+        Player owner = Bukkit.getPlayer(town.getOwnerId());
+        if (owner != null && owner.isOnline()) {
+            owner.sendMessage(plugin.getConfigManager().getMessage("taxes.nation-paid",
+                            "§6Your town paid §e{0} §6in nation taxes to §e{1}")
+                    .replace("{0}", plugin.getVaultIntegration().format(amount))
+                    .replace("{1}", nation.getName()));
+        }
+    }
+
+    /**
+     * Handle town defaulting on nation taxes
+     *
+     * @param town The town
+     * @param nation The nation
+     * @param amount The tax amount
+     */
+    private void handleTownTaxDefault(Town town, Nation nation, double amount) {
+        // Notify town owner of tax default
+        Player owner = Bukkit.getPlayer(town.getOwnerId());
+        if (owner != null && owner.isOnline()) {
+            owner.sendMessage(plugin.getConfigManager().getMessage("taxes.failed-to-pay",
+                            "§cYour town failed to pay §e{0} §cin nation taxes to §e{1}")
+                    .replace("{0}", plugin.getVaultIntegration().format(amount))
+                    .replace("{1}", nation.getName()));
+        }
+
+        // Notify nation leader of tax default
+        Player leader = Bukkit.getPlayer(nation.getLeaderId());
+        if (leader != null && leader.isOnline()) {
+            leader.sendMessage(plugin.getConfigManager().getMessage("taxes.town-defaulted",
+                            "§cTown §e{0} §cfailed to pay §e{1} §cin nation taxes.")
+                    .replace("{0}", town.getName())
+                    .replace("{1}", plugin.getVaultIntegration().format(amount)));
+        }
+
+        // TODO: Implement additional penalties for tax defaulting
+        // For example: loss of claim permissions, automatic removal from nation after multiple defaults, etc.
     }
 
     /**

@@ -1,16 +1,18 @@
 package com.alan.empiresOfAlan.events.town;
 
-import com.alan.empiresOfAlan.events.EmpireEvent;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.TownRole;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 /**
  * Event that is called when a resident is demoted in a town
  */
-public class TownDemoteEvent extends EmpireEvent implements Cancellable {
+public class TownDemoteEvent extends Event implements Cancellable {
+    private static final HandlerList HANDLERS = new HandlerList();
     private final Town town;
     private final Resident resident;
     private final Player demoter;
@@ -19,7 +21,6 @@ public class TownDemoteEvent extends EmpireEvent implements Cancellable {
     private boolean cancelled;
 
     public TownDemoteEvent(Town town, Resident resident, Player demoter, TownRole oldRole, TownRole newRole) {
-        super(false); // Sync event
         this.town = town;
         this.resident = resident;
         this.demoter = demoter;
@@ -81,5 +82,14 @@ public class TownDemoteEvent extends EmpireEvent implements Cancellable {
     @Override
     public void setCancelled(boolean cancelled) {
         this.cancelled = cancelled;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return HANDLERS;
+    }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
     }
 }

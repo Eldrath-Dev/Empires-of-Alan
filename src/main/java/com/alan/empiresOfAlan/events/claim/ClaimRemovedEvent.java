@@ -1,22 +1,23 @@
 package com.alan.empiresOfAlan.events.claim;
 
-import com.alan.empiresOfAlan.events.EmpireEvent;
 import com.alan.empiresOfAlan.model.Claim;
 import com.alan.empiresOfAlan.model.Town;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 /**
  * Event that is called when a claim is removed from a town
  */
-public class ClaimRemovedEvent extends EmpireEvent implements Cancellable {
+public class ClaimRemovedEvent extends Event implements Cancellable {
+    private static final HandlerList HANDLERS = new HandlerList();
     private final Claim claim;
     private final Town town;
     private final Player unclaimer;
     private boolean cancelled;
 
     public ClaimRemovedEvent(Claim claim, Town town, Player unclaimer) {
-        super(false); // Sync event
         this.claim = claim;
         this.town = town;
         this.unclaimer = unclaimer;
@@ -58,5 +59,14 @@ public class ClaimRemovedEvent extends EmpireEvent implements Cancellable {
     @Override
     public void setCancelled(boolean cancelled) {
         this.cancelled = cancelled;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return HANDLERS;
+    }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
     }
 }

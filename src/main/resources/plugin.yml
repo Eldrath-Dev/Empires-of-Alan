@@ -1,0 +1,4 @@
+name: EmpiresOfAlan
+version: '2.0.0'
+main: com.alan.empiresOfAlan.EmpiresOfAlan
+api-version: '1.21'

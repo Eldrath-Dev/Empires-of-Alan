@@ -1,0 +1,79 @@
+# EmpiresOfAlan Configuration
+# Version 2.0.0
+
+# General Settings
+general:
+  # Default language (only en_US for now)
+  language: en_US
+  # Economy settings
+  economy:
+    # Starting balance for new towns
+    town-starting-balance: 0.0
+    # Starting balance for new nations
+    nation-starting-balance: 0.0
+
+# Town Settings
+towns:
+  # Minimum characters for town name
+  min-name-length: 3
+  # Maximum characters for town name
+  max-name-length: 16
+  # Allowed characters in town name (regex)
+  name-regex: "[a-zA-Z0-9_]+"
+  # Base number of claims a town starts with
+  base-claim-count: 5
+  # Additional claims per resident
+  claims-per-resident: 2
+  # Maximum residents per town (0 for unlimited)
+  max-residents: 0
+
+# Nation Settings
+nations:
+  # Minimum characters for nation name
+  min-name-length: 3
+  # Maximum characters for nation name
+  max-name-length: 20
+  # Allowed characters in nation name (regex)
+  name-regex: "[a-zA-Z0-9_]+"
+  # Maximum towns per nation (0 for unlimited)
+  max-towns: 0
+
+# Claim Settings
+claims:
+  # Visualization settings
+  visualization:
+    # Whether to show particles at claim borders
+    enabled: true
+    # Particle type for border visualization
+    particle-type: FLAME
+    # How long visualization lasts (in seconds)
+    duration: 10
+  # Protection settings
+  protection:
+    # Default flags for new claims
+    defaults:
+      pvp: false
+      explosions: false
+      mob-spawning: true
+      fire-spread: false
+      build: false
+      interact: false
+      public-spawn: false
+
+# Tax Settings
+taxes:
+  # Whether taxes are enabled
+  enabled: true
+  # Town tax collection interval (in milliseconds)
+  town-interval: 86400000 # 24 hours
+  # Nation tax collection interval (in milliseconds)
+  nation-interval: 86400000 # 24 hours
+
+# Teleport Settings
+teleports:
+  # Cooldown between teleports (in seconds)
+  cooldown: 30
+  # Warmup time before teleport (in seconds)
+  warmup: 3
+  # Whether to cancel teleport on movement
+  cancel-on-move: true

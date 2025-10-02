@@ -1,0 +1,82 @@
+# EmpiresOfAlan English (US) Language File
+# Version 2.0.0
+
+general:
+  prefix: "&6[&eEmpiresOfAlan&6] "
+  no-permission: "&cYou don't have permission to do that."
+  player-only: "&cThis command can only be used by players."
+  command-error: "&cAn error occurred while executing the command."
+  not-implemented: "&cThis feature is not implemented yet."
+
+residents:
+  not-found: "&cResident not found."
+  already-in-town: "&cYou are already in a town."
+  not-in-town: "&cYou are not in a town."
+  already-in-nation: "&cYou are already in a nation."
+  not-in-nation: "&cYou are not in a nation."
+
+towns:
+  created: "&aSuccessfully created town: &e{0}"
+  deleted: "&aTown &e{0} &ahas been deleted."
+  already-exists: "&cA town with that name already exists."
+  not-found: "&cTown not found."
+  joined: "&aYou have joined the town: &e{0}"
+  left: "&aYou have left the town: &e{0}"
+  not-enough-permissions: "&cYou don't have enough permissions in your town."
+  promoted: "&aPlayer &e{0} &ahas been promoted to &e{1}"
+  demoted: "&aPlayer &e{0} &ahas been demoted to &e{1}"
+  spawn-set: "&aTown spawn has been set."
+  teleported: "&aTeleported to town: &e{0}"
+  max-claims-reached: "&cThis town has reached its maximum claim limit."
+  deposit-success: "&aDeposited &e{0} &ainto the town bank."
+  withdraw-success: "&aWithdrew &e{0} &afrom the town bank."
+  insufficient-funds: "&cInsufficient funds in the town bank."
+  tax-rate-set: "&aTown tax rate set to &e{0}%"
+  chat-enabled: "&aTown chat enabled."
+  chat-disabled: "&aTown chat disabled."
+  chat-format: "&b[Town] &f{0}: &7{1}"
+
+nations:
+  created: "&aSuccessfully created nation: &e{0}"
+  deleted: "&aNation &e{0} &ahas been deleted."
+  already-exists: "&cA nation with that name already exists."
+  not-found: "&cNation not found."
+  town-added: "&aTown &e{0} &ahas joined the nation: &e{1}"
+  town-removed: "&aTown &e{0} &ahas left the nation: &e{1}"
+  not-enough-permissions: "&cYou don't have enough permissions in your nation."
+  promoted: "&aPlayer &e{0} &ahas been promoted to &e{1}"
+  demoted: "&aPlayer &e{0} &ahas been demoted to &e{1}"
+  spawn-set: "&aNation spawn has been set."
+  teleported: "&aTeleported to nation: &e{0}"
+  capital-changed: "&aThe capital of nation &e{0} &ahas been changed to &e{1}"
+  deposit-success: "&aDeposited &e{0} &ainto the nation bank."
+  withdraw-success: "&aWithdrew &e{0} &afrom the nation bank."
+  insufficient-funds: "&cInsufficient funds in the nation bank."
+  tax-rate-set: "&aNation tax rate set to &e{0}%"
+  chat-enabled: "&aNation chat enabled."
+  chat-disabled: "&aNation chat disabled."
+  chat-format: "&9[Nation] &f{0}: &7{1}"
+
+claims:
+  claimed: "&aChunk claimed for town: &e{0}"
+  unclaimed: "&aChunk unclaimed."
+  already-claimed: "&cThis chunk is already claimed."
+  not-claimed: "&cThis chunk is not claimed."
+  not-owned: "&cThis chunk is not owned by your town."
+  flag-set: "&aFlag &e{0} &aset to &e{1}"
+  visualize-started: "&aShowing claim borders for &e{0} &aseconds."
+  cannot-build: "&cYou cannot build in this area."
+  cannot-interact: "&cYou cannot interact with blocks in this area."
+  town-required: "&cYou need to be in a town to claim land."
+
+taxes:
+  town-paid: "&6You paid &e{0} &6in town taxes to &e{1}"
+  town-collected: "&6Your town collected &e{0} &6in taxes."
+  nation-paid: "&6Your town paid &e{0} &6in nation taxes to &e{1}"
+  nation-collected: "&6Your nation collected &e{0} &6in taxes."
+  failed-to-pay: "&cYour town failed to pay &e{0} &cin nation taxes."
+
+teleport:
+  warmup: "&6Teleporting in &e{0} &6seconds. Don't move!"
+  cancelled: "&cTeleport cancelled due to movement."
+  cooldown: "&cYou must wait &e{0} &cseconds before teleporting again."

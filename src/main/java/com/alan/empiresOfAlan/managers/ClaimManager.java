@@ -356,7 +356,6 @@ public class ClaimManager {
      * Visualize claim borders with particles
      *
      * @param chunk The chunk to visualize
-     * @param duration Duration in seconds
      */
     public void visualizeClaim(Chunk chunk) {
         if (plugin == null) {

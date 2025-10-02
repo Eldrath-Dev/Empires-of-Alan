@@ -33,6 +33,7 @@ public class EmpiresOfAlan extends JavaPlugin {
     private CommandManager commandManager;
     private VaultIntegration vaultIntegration;
     private BukkitTask taxTask;
+    private BukkitTask saveTask;
     private EmpiresOfAlanAPI api;
 
     // Database DAOs
@@ -85,6 +86,11 @@ public class EmpiresOfAlan extends JavaPlugin {
             TaxManager.getInstance().checkAndCollectTaxes();
         }, 20 * 60 * 30, 20 * 60 * 30); // 30 minutes in ticks
 
+        // Start data save task
+        int saveInterval = configManager.getConfig().getInt("persistence.save-interval-minutes", 5);
+        this.saveTask = getServer().getScheduler().runTaskTimer(this, this::saveData,
+                20L * 60 * saveInterval, 20L * 60 * saveInterval);
+
         getLogger().info("EmpiresOfAlan has been enabled!");
     }
 
@@ -96,6 +102,9 @@ public class EmpiresOfAlan extends JavaPlugin {
         // Cancel scheduled tasks
         if (taxTask != null) {
             taxTask.cancel();
+        }
+        if (saveTask != null) {
+            saveTask.cancel();
         }
 
         // Close database connection
@@ -118,9 +127,12 @@ public class EmpiresOfAlan extends JavaPlugin {
         try {
             // The order is important due to dependencies between managers
             ResidentManager.getInstance();
-            TownManager.getInstance();
-            NationManager.getInstance();
-            ClaimManager.getInstance();
+            TownManager townManager = TownManager.getInstance();
+            townManager.setPlugin(this);
+            NationManager nationManager = NationManager.getInstance();
+            nationManager.setPlugin(this);
+            ClaimManager claimManager = ClaimManager.getInstance();
+            claimManager.setPlugin(this);
 
             TaxManager taxManager = TaxManager.getInstance();
             taxManager.loadConfig(configManager);

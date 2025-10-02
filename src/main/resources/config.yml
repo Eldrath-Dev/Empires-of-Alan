@@ -20,12 +20,8 @@ towns:
   max-name-length: 16
   # Allowed characters in town name (regex)
   name-regex: "[a-zA-Z0-9_]+"
-  # Base number of claims a town starts with
-  base-claim-count: 5
-  # Additional claims per resident
-  claims-per-resident: 2
-  # Maximum residents per town (0 for unlimited)
-  max-residents: 0
+  # Auto-claim surrounding chunks on creation
+  auto-claim-surrounding: true
 
 # Nation Settings
 nations:
@@ -38,9 +34,23 @@ nations:
   # Maximum towns per nation (0 for unlimited)
   max-towns: 0
 
-# Claim Settings
+# Chunk Claim Settings
+chunk-claim:
+  # Base chunk limit
+  base-limit: 5
+  # Free chunks before cost applies
+  free-chunks: 10
+  # Cost per chunk after free limit
+  claim-cost: 50.0
+  # Payment priority: town-first or player-first
+  pay-priority: town-first
+  # Bonus chunks per player
+  per-player-bonus: 10
+  # Bonus chunks for 5+ players
+  five-player-bonus: 15
+
+# Claim Visualization Settings
 claims:
-  # Visualization settings
   visualization:
     # Whether to show particles at claim borders
     enabled: true
@@ -77,3 +87,30 @@ teleports:
   warmup: 3
   # Whether to cancel teleport on movement
   cancel-on-move: true
+
+# Persistence Settings
+persistence:
+  # Save interval in minutes
+  save-interval-minutes: 5
+
+# Chat Settings
+chat:
+  # Show town name in chat
+  show-town: true
+  # Show nation name in chat
+  show-nation: true
+  # Format for town/nation info: {town} and {nation} are placeholders
+  format: "[{town}|{nation}]"
+  # Global chat format: {0}=town, {1}=nation, {2}=player, {3}=message
+  global-format: "&7[&e{0}&7|&9{1}&7] &f{2}&f: &7{3}"
+  # Town chat format: {0}=town, {1}=player, {2}=message
+  town-format: "&b[{0}] &f{1}&f: &7{2}"
+  # Nation chat format: {0}=nation, {1}=player, {2}=message
+  nation-format: "&9[{0}] &f{1}&f: &7{2}"
+
+# List Settings
+list:
+  # Number of towns to show per page
+  towns-per-page: 10
+  # Number of nations to show per page
+  nations-per-page: 10

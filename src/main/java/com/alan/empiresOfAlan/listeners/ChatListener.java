@@ -8,7 +8,6 @@ import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.util.ConfigManager;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -28,7 +27,7 @@ public class ChatListener implements Listener {
         this.configManager = plugin.getConfigManager();
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         if (event.isCancelled()) {
             return;
@@ -55,6 +54,66 @@ public class ChatListener implements Listener {
             sendNationChat(player, resident, event.getMessage());
             return;
         }
+
+        // For global chat, inject town/nation info into the format
+        injectTownNationInfo(event, resident);
+    }
+
+    private void injectTownNationInfo(AsyncPlayerChatEvent event, Resident resident) {
+        // Check if town/nation display is enabled
+        boolean showTown = configManager.getConfig().getBoolean("chat.show-town", true);
+        boolean showNation = configManager.getConfig().getBoolean("chat.show-nation", true);
+
+        if (!showTown && !showNation) {
+            return;
+        }
+
+        TownManager townManager = TownManager.getInstance();
+        NationManager nationManager = NationManager.getInstance();
+
+        String townName = "";
+        String nationName = "";
+
+        // Get town name
+        if (showTown && resident.hasTown()) {
+            Town town = townManager.getTown(resident.getTownId());
+            if (town != null) {
+                townName = town.getName();
+            }
+        }
+
+        // Get nation name
+        if (showNation && resident.hasNation()) {
+            Nation nation = nationManager.getNation(resident.getNationId());
+            if (nation != null) {
+                nationName = nation.getName();
+            }
+        }
+
+        // Only modify format if we have town/nation info to show
+        if (!townName.isEmpty() || !nationName.isEmpty()) {
+            String format = configManager.getConfig().getString("chat.format", "[{town}|{nation}] ");
+
+            // Replace placeholders
+            format = format.replace("{town}", townName.isEmpty() ? "" : townName);
+            format = format.replace("{nation}", nationName.isEmpty() ? "" : nationName);
+
+            // Clean up empty brackets or pipes
+            format = format.replace("[]", "");
+            format = format.replace("||", "|");
+            format = format.replace("[|", "[");
+            format = format.replace("|]", "]");
+
+            // Trim and add space if needed
+            format = format.trim();
+            if (!format.isEmpty() && !format.endsWith(" ")) {
+                format += " ";
+            }
+
+            // Prepend to existing format
+            String currentFormat = event.getFormat();
+            event.setFormat(format + currentFormat);
+        }
     }
 
     private void sendTownChat(Player sender, Resident resident, String message) {
@@ -66,15 +125,15 @@ public class ChatListener implements Listener {
         }
 
         // Format message with town name
-        String format = configManager.getMessage("towns.chat-format",
-                        "&b[{0}] &f{1}: &7{2}")
+        String format = configManager.getMessage("chat.town-format",
+                        "&b[{0}] &f{1}&f: &7{2}")
                 .replace("{0}", town.getName())
                 .replace("{1}", sender.getName())
                 .replace("{2}", message);
 
         // Send to all town members
         for (UUID memberId : town.getResidents()) {
-            Player member = Bukkit.getPlayer(memberId);
+            Player member = sender.getServer().getPlayer(memberId);
             if (member != null && member.isOnline()) {
                 member.sendMessage(format);
             }
@@ -93,8 +152,8 @@ public class ChatListener implements Listener {
         }
 
         // Format message with nation name
-        String format = configManager.getMessage("nations.chat-format",
-                        "&9[{0}] &f{1}: &7{2}")
+        String format = configManager.getMessage("chat.nation-format",
+                        "&9[{0}] &f{1}&f: &7{2}")
                 .replace("{0}", nation.getName())
                 .replace("{1}", sender.getName())
                 .replace("{2}", message);
@@ -107,7 +166,7 @@ public class ChatListener implements Listener {
             Town town = townManager.getTown(townId);
             if (town != null) {
                 for (UUID memberId : town.getResidents()) {
-                    Player member = Bukkit.getPlayer(memberId);
+                    Player member = sender.getServer().getPlayer(memberId);
                     if (member != null && member.isOnline()) {
                         member.sendMessage(format);
                     }

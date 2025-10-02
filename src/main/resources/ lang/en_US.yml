@@ -11,6 +11,7 @@ general:
   invalid-amount: "&cInvalid amount."
   insufficient-funds: "&cYou don't have enough money."
   transaction-failed: "&cTransaction failed. Your money has not been withdrawn."
+  invalid-page: "&cInvalid page number."
 
 residents:
   not-found: "&cResident not found."
@@ -40,13 +41,15 @@ towns:
   tax-rate-set: "&aTown tax rate set to &e{0}%"
   chat-enabled: "&aTown chat enabled."
   chat-disabled: "&aTown chat disabled."
-  chat-format: "&b[Town] &f{0}: &7{1}"
   name-invalid-length: "&cTown name must be between {0} and {1} characters."
   name-invalid-chars: "&cTown name contains invalid characters."
   creation-failed: "&cFailed to create town. You may already be in a town."
   delete-confirm: "&cAre you sure you want to delete your town? This action cannot be undone. Type &e/town delete confirm &cto confirm."
   deletion-failed: "&cFailed to delete town."
   not-owner: "&cOnly the town owner can delete the town."
+  no-towns: "&cThere are no towns yet."
+  list-header: "&6---- Towns (Page {0}/{1}) ----"
+  list-entry: "&e{0} &7(Mayor: &f{1}&7, &f{2} &7residents)"
 
 nations:
   created: "&aSuccessfully created nation: &e{0}"
@@ -69,14 +72,17 @@ nations:
   tax-rate-set: "&aNation tax rate set to &e{0}%"
   chat-enabled: "&aNation chat enabled."
   chat-disabled: "&aNation chat disabled."
-  chat-format: "&9[Nation] &f{0}: &7{1}"
   must-be-town-owner: "&cYou must be a town owner to create a nation."
   town-already-in-nation: "&cYour town is already part of a nation."
   creation-failed: "&cFailed to create nation."
   not-in-nation: "&cYou are not in a nation."
+  no-nations: "&cThere are no nations yet."
+  list-header: "&6---- Nations (Page {0}/{1}) ----"
+  list-entry: "&e{0} &7(Leader: &f{1}&7, &f{2} &7towns)"
 
 claims:
   claimed: "&aChunk claimed for town: &e{0}"
+  claimed-paid: "&aChunk claimed for town: &e{0} &a(Cost: &e${1}&a)"
   unclaimed: "&aChunk unclaimed."
   already-claimed: "&cThis chunk is already claimed."
   not-claimed: "&cThis chunk is not claimed."
@@ -88,6 +94,7 @@ claims:
   pvp-disabled: "&cPvP is disabled in this area."
   claim-failed: "&cFailed to claim this chunk."
   town-required: "&cYou need to be in a town to claim land."
+  cannot-afford: "&cYou cannot afford to claim this chunk. Cost: &e${0}"
 
 taxes:
   town-paid: "&6You paid &e{0} &6in town taxes to &e{1}"
@@ -102,3 +109,8 @@ teleport:
   warmup: "&6Teleporting in &e{0} &6seconds. Don't move!"
   cancelled: "&cTeleport cancelled due to movement."
   cooldown: "&cYou must wait &e{0} &cseconds before teleporting again."
+
+chat:
+  global-format: "&7[&e{0}&7|&9{1}&7] &f{2}&f: &7{3}"
+  town-format: "&b[{0}] &f{1}&f: &7{2}"
+  nation-format: "&9[{0}] &f{1}&f: &7{2}"

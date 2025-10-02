@@ -145,6 +145,108 @@ public class ClaimManager {
     }
 
     /**
+     * Claim a chunk for a town with cost calculation
+     *
+     * @param chunk The chunk to claim
+     * @param townId The town claiming it
+     * @param player The player making the claim
+     * @return The new claim or null if unsuccessful
+     */
+    public Claim claimChunkWithCost(Chunk chunk, UUID townId, Player player) {
+        // Check if already claimed
+        if (isClaimed(chunk)) {
+            return null;
+        }
+
+        TownManager townManager = TownManager.getInstance();
+        Town town = townManager.getTown(townId);
+
+        if (town == null) {
+            return null;
+        }
+
+        // Check if town can claim more chunks
+        if (!town.canClaimMore()) {
+            return null;
+        }
+
+        // Check player permissions
+        ResidentManager residentManager = ResidentManager.getInstance();
+        Resident resident = residentManager.getResident(player.getUniqueId());
+
+        if (resident == null || !resident.hasTown() || !resident.getTownId().equals(townId) ||
+                !resident.hasTownPermission(TownRole.KNIGHT)) {
+            return null;
+        }
+
+        // Calculate claim cost
+        int freeChunks = plugin.getConfigManager().getConfig().getInt("chunk-claim.free-chunks", 10);
+        double claimCost = plugin.getConfigManager().getConfig().getDouble("chunk-claim.claim-cost", 50.0);
+        String payPriority = plugin.getConfigManager().getConfig().getString("chunk-claim.pay-priority", "town-first");
+
+        // Check if this is a free chunk
+        if (town.getClaims().size() < freeChunks) {
+            // Free chunk - no cost
+            return claimChunk(chunk, townId, player);
+        }
+
+        // This is a paid chunk - check if player/town can afford it
+        boolean canAfford = false;
+
+        if ("town-first".equals(payPriority)) {
+            // Try town bank first
+            if (town.getBankAccount().getBalance() >= claimCost) {
+                town.getBankAccount().withdraw(claimCost);
+                canAfford = true;
+            } else {
+                // Try player balance
+                if (plugin.getVaultIntegration().has(player, claimCost)) {
+                    plugin.getVaultIntegration().withdraw(player, claimCost);
+                    canAfford = true;
+                }
+            }
+        } else {
+            // Try player balance first
+            if (plugin.getVaultIntegration().has(player, claimCost)) {
+                plugin.getVaultIntegration().withdraw(player, claimCost);
+                canAfford = true;
+            } else {
+                // Try town bank
+                if (town.getBankAccount().getBalance() >= claimCost) {
+                    town.getBankAccount().withdraw(claimCost);
+                    canAfford = true;
+                }
+            }
+        }
+
+        if (!canAfford) {
+            player.sendMessage(plugin.getConfigManager().getMessage("claims.cannot-afford",
+                            "&cYou cannot afford to claim this chunk. Cost: &e${0}")
+                    .replace("{0}", String.valueOf(claimCost)));
+            return null;
+        }
+
+        // Create the claim
+        UUID claimId = UUID.randomUUID();
+        Claim claim = new Claim(claimId, chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), townId);
+
+        // Register the claim
+        claims.put(claimId, claim);
+        locationToClaimId.put(claim.getLocationKey(), claimId);
+
+        // Add to town
+        town.addClaim(claimId);
+
+        // Notify player
+        player.sendMessage(plugin.getConfigManager().getMessage("claims.claimed-paid",
+                        "&aChunk claimed for town: &e{0} &a(Cost: &e${1}&a)")
+                .replace("{0}", town.getName())
+                .replace("{1}", String.valueOf(claimCost)));
+
+        return claim;
+    }
+
+    /**
      * Unclaim a chunk
      *
      * @param chunk The chunk to unclaim
@@ -362,6 +464,11 @@ public class ClaimManager {
             return;
         }
 
+        // Check if visualization is enabled
+        if (!plugin.getConfigManager().getConfig().getBoolean("claims.visualization.enabled", true)) {
+            return;
+        }
+
         Claim claim = getClaimAt(chunk);
         if (claim == null) {
             return;
@@ -372,7 +479,7 @@ public class ClaimManager {
         // Schedule particle display
         Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             int ticks = 0;
-            final int maxTicks = duration * 20; // Convert seconds to ticks
+            final int maxTicks = duration * 4; // Convert seconds to ticks (we run every 5 ticks)
 
             @Override
             public void run() {

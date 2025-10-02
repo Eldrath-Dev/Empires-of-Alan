@@ -26,6 +26,7 @@ public class NationCommand extends BaseCommand {
         subCommands.put("join", new NationJoinCommand(plugin));
         subCommands.put("leave", new NationLeaveCommand(plugin));
         subCommands.put("kick", new NationKickCommand(plugin));
+        subCommands.put("list", new NationListCommand(plugin)); // Added list command
     }
 
     @Override

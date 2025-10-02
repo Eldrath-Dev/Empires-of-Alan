@@ -28,6 +28,7 @@ public class TownCommand extends BaseCommand {
         subCommands.put("join", new TownJoinCommand(plugin));
         subCommands.put("leave", new TownLeaveCommand(plugin));
         subCommands.put("kick", new TownKickCommand(plugin));
+        subCommands.put("list", new TownListCommand(plugin)); // Added list command
     }
 
     @Override

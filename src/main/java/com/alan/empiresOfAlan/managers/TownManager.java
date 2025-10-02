@@ -1,10 +1,13 @@
 package com.alan.empiresOfAlan.managers;
 
+import com.alan.empiresOfAlan.EmpiresOfAlan;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
 import com.alan.empiresOfAlan.model.enums.TownRole;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -13,6 +16,7 @@ public class TownManager {
     private static TownManager instance;
     private final Map<UUID, Town> towns;
     private final Map<String, UUID> townNameToId;
+    private EmpiresOfAlan plugin;
 
     private TownManager() {
         this.towns = new HashMap<>();
@@ -24,6 +28,15 @@ public class TownManager {
             instance = new TownManager();
         }
         return instance;
+    }
+
+    /**
+     * Set the plugin reference
+     *
+     * @param plugin The plugin instance
+     */
+    public void setPlugin(EmpiresOfAlan plugin) {
+        this.plugin = plugin;
     }
 
     /**
@@ -90,7 +103,42 @@ public class TownManager {
         towns.put(townId, town);
         townNameToId.put(name.toLowerCase(), townId);
 
+        // Auto-claim surrounding chunks if enabled
+        if (plugin != null && plugin.getConfigManager().getConfig().getBoolean("towns.auto-claim-surrounding", true)) {
+            autoClaimSurroundingChunks(town, founder.getLocation().getChunk(), founder);
+        }
+
         return town;
+    }
+
+    /**
+     * Auto-claim surrounding chunks when town is created
+     *
+     * @param town The town
+     * @param centerChunk The center chunk
+     * @param player The player
+     */
+    private void autoClaimSurroundingChunks(Town town, Chunk centerChunk, Player player) {
+        ClaimManager claimManager = ClaimManager.getInstance();
+        World world = centerChunk.getWorld();
+
+        // Claim the center chunk first
+        claimManager.claimChunk(centerChunk, town.getId(), player);
+
+        // Claim 8 surrounding chunks
+        int centerX = centerChunk.getX();
+        int centerZ = centerChunk.getZ();
+
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && z == 0) continue; // Skip center chunk
+
+                Chunk chunk = world.getChunkAt(centerX + x, centerZ + z);
+                if (!claimManager.isClaimed(chunk) && town.canClaimMore()) {
+                    claimManager.claimChunk(chunk, town.getId(), player);
+                }
+            }
+        }
     }
 
     /**

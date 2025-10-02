@@ -1,5 +1,6 @@
 package com.alan.empiresOfAlan.managers;
 
+import com.alan.empiresOfAlan.EmpiresOfAlan;
 import com.alan.empiresOfAlan.model.Nation;
 import com.alan.empiresOfAlan.model.Resident;
 import com.alan.empiresOfAlan.model.Town;
@@ -13,6 +14,7 @@ public class NationManager {
     private static NationManager instance;
     private final Map<UUID, Nation> nations;
     private final Map<String, UUID> nationNameToId;
+    private EmpiresOfAlan plugin;
 
     private NationManager() {
         this.nations = new HashMap<>();
@@ -24,6 +26,15 @@ public class NationManager {
             instance = new NationManager();
         }
         return instance;
+    }
+
+    /**
+     * Set the plugin reference
+     *
+     * @param plugin The plugin instance
+     */
+    public void setPlugin(EmpiresOfAlan plugin) {
+        this.plugin = plugin;
     }
 
     /**

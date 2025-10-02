@@ -149,12 +149,25 @@ public class Town {
 
     /**
      * Calculates the maximum claims this town can have
-     * Currently using a simple formula: 5 + (number of residents * 2)
+     * Dynamic system based on residents and configuration
      *
      * @return Maximum number of claims allowed
      */
     public int getMaxClaims() {
-        return 5 + (residents.size() * 2);
+        // Default values (these should be configurable)
+        int baseLimit = 5;
+        int perPlayerBonus = 10;
+        int fivePlayerBonus = 15;
+
+        int residentCount = getResidentCount();
+        int claims = baseLimit + (residentCount * perPlayerBonus);
+
+        // Add bonus for 5+ players
+        if (residentCount >= 5) {
+            claims += fivePlayerBonus;
+        }
+
+        return claims;
     }
 
     /**

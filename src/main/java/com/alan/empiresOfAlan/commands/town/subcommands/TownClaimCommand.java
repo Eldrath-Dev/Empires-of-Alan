@@ -61,7 +61,7 @@ public class TownClaimCommand extends SubCommand {
             return false;
         }
 
-        // Claim the chunk
+        // Claim the chunk with cost
         Chunk chunk = player.getLocation().getChunk();
         ClaimManager claimManager = ClaimManager.getInstance();
 
@@ -71,10 +71,9 @@ public class TownClaimCommand extends SubCommand {
             return false;
         }
 
-        Claim claim = claimManager.claimChunk(chunk, town.getId(), player);
+        Claim claim = claimManager.claimChunkWithCost(chunk, town.getId(), player);
         if (claim == null) {
-            player.sendMessage(configManager.getMessage("claims.claim-failed",
-                    "&cFailed to claim this chunk."));
+            // Message already sent in claimChunkWithCost
             return false;
         }
 

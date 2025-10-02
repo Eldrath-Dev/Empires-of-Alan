@@ -1,9 +1,14 @@
 package com.alan.empiresOfAlan;
 
+import com.alan.empiresOfAlan.commands.CommandManager;
 import com.alan.empiresOfAlan.database.SQLiteManager;
+import com.alan.empiresOfAlan.listeners.ChatListener;
+import com.alan.empiresOfAlan.listeners.ClaimListener;
+import com.alan.empiresOfAlan.listeners.PlayerListener;
 import com.alan.empiresOfAlan.managers.*;
 import com.alan.empiresOfAlan.util.AsyncExecutor;
 import com.alan.empiresOfAlan.util.ConfigManager;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -13,6 +18,7 @@ public class EmpiresOfAlan extends JavaPlugin {
     private ConfigManager configManager;
     private SQLiteManager sqliteManager;
     private AsyncExecutor asyncExecutor;
+    private CommandManager commandManager;
     private BukkitTask taxTask;
 
     @Override
@@ -32,11 +38,17 @@ public class EmpiresOfAlan extends JavaPlugin {
             getLogger().info("Database initialized successfully!");
 
             // Load data from database
-            // This will be implemented in Phase 2
+            // This will be implemented later
         });
 
         // Initialize managers
         initializeManagers();
+
+        // Register commands
+        this.commandManager = new CommandManager(this);
+
+        // Register listeners
+        registerListeners();
 
         // Start tax collection task (runs every 30 minutes)
         this.taxTask = getServer().getScheduler().runTaskTimer(this, () -> {
@@ -54,7 +66,7 @@ public class EmpiresOfAlan extends JavaPlugin {
         }
 
         // Save data to database
-        // This will be implemented in Phase 2
+        // This will be implemented later
 
         // Close database connection
         if (sqliteManager != null) {
@@ -85,6 +97,19 @@ public class EmpiresOfAlan extends JavaPlugin {
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Failed to initialize managers", e);
         }
+    }
+
+    /**
+     * Register event listeners
+     */
+    private void registerListeners() {
+        PluginManager pluginManager = getServer().getPluginManager();
+
+        pluginManager.registerEvents(new ChatListener(this), this);
+        pluginManager.registerEvents(new PlayerListener(this), this);
+        pluginManager.registerEvents(new ClaimListener(this), this);
+
+        getLogger().info("Event listeners registered successfully!");
     }
 
     /**

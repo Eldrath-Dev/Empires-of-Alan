@@ -1,4 +1,65 @@
 name: EmpiresOfAlan
-version: '2.0.0'
+version: '${project.version}'
 main: com.alan.empiresOfAlan.EmpiresOfAlan
 api-version: '1.21'
+authors: [Alan]
+description: A modern town and nation management plugin for Minecraft
+softdepend: [Vault]
+
+commands:
+  town:
+    description: Main town command
+    aliases: [t]
+    usage: /<command> [subcommand] [args]
+  nation:
+    description: Main nation command
+    aliases: [n]
+    usage: /<command> [subcommand] [args]
+
+permissions:
+  empiresofalan.admin:
+    description: Gives access to all EmpiresOfAlan commands
+    default: op
+    children:
+      empiresofalan.town.*: true
+      empiresofalan.nation.*: true
+
+  empiresofalan.town.*:
+    description: Gives access to all town commands
+    default: false
+    children:
+      empiresofalan.town.create: true
+      empiresofalan.town.delete: true
+      empiresofalan.town.claim: true
+      empiresofalan.town.unclaim: true
+      empiresofalan.town.promote: true
+      empiresofalan.town.demote: true
+      empiresofalan.town.spawn: true
+      empiresofalan.town.setspawn: true
+      empiresofalan.town.deposit: true
+      empiresofalan.town.withdraw: true
+      empiresofalan.town.chat: true
+      empiresofalan.town.info: true
+      empiresofalan.town.invite: true
+      empiresofalan.town.join: true
+      empiresofalan.town.leave: true
+      empiresofalan.town.kick: true
+
+  empiresofalan.nation.*:
+    description: Gives access to all nation commands
+    default: false
+    children:
+      empiresofalan.nation.create: true
+      empiresofalan.nation.delete: true
+      empiresofalan.nation.promote: true
+      empiresofalan.nation.demote: true
+      empiresofalan.nation.spawn: true
+      empiresofalan.nation.setspawn: true
+      empiresofalan.nation.deposit: true
+      empiresofalan.nation.withdraw: true
+      empiresofalan.nation.chat: true
+      empiresofalan.nation.info: true
+      empiresofalan.nation.invite: true
+      empiresofalan.nation.join: true
+      empiresofalan.nation.leave: true
+      empiresofalan.nation.kick: true
